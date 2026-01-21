@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Logistics Platform
 
-## Getting Started
+Enterprise logistics platform built with Next.js App Router, Tailwind CSS v4, and Supabase (Postgres + Auth + Realtime). Includes marketing site, customer dashboard, admin console, realtime shipments, and tracking map with fallback.
 
-First, run the development server:
+## Architecture
+- Frontend: Next.js 13+ App Router, React 19, Tailwind CSS v4, next/font (Geist)
+- Backend: Supabase (PostgreSQL, Auth, Realtime)
+- Auth: Supabase email/password; roles (admin, customer) enforced in proxy and DB policies
+- Realtime: Supabase Realtime over WebSockets for shipment/event streams; UI uses the pattern in `app/dashboard/shipments.tsx`
+- Maps: MapLibre with public basemap; simulated preview fallback on failure
+- Deployment: Vercel-ready; works behind Cloudflare/AWS CDNs
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Features
+- Public marketing + CTA pages (home, solutions, platform, company, contact)
+- Tracking page with live map preview and fallback
+- Customer dashboard: metrics, recent consignments, mission alerts, tracking preview
+- Admin console `/admin`: admin-only overview, shortcuts to shipments/vehicles/tracking
+- Shipments detail: realtime updates, assignment, and status updates
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (server only)
+- `SUPABASE_JWT_SECRET` (server only)
+- `NEXT_PUBLIC_APP_URL` (e.g. `http://localhost:3000`)
+- Optional email: `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `AFGHCO <onboarding@resend.dev>`)
+- Optional map style: `NEXT_PUBLIC_MAP_STYLE_URL`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Setup
+1) Install deps: `npm install`
+2) Create `.env.local` with Supabase keys (Dashboard → Settings → API)
+3) Run migrations in `supabase/migrations/`:
+   - Local (Supabase CLI local): `npm run db:migrate:local`
+   - Hosted Supabase: `supabase link --project-ref <PROJECT_REF>` then `supabase migration repair --status applied <VERSION>` if needed, then `npm run db:push`
+4) Start dev server: `npm run dev`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Auth & Access Control
+- Proxy protects `/dashboard`, `/admin`, `/dispatcher`; unauthenticated users go to `/dashboard/auth/login`
+- Admin-only pages require `profiles.role === 'admin'`; enforce matching Postgres RLS/policies
+- Users/profiles store roles; use `auth.uid()`/`auth.role()` in policies; triggers can set default roles on signup
 
-## Learn More
+## Dashboards
+- Admin: overview metrics, mission alerts, shortcuts to shipments/vehicles/tracking
+- Customer: overview metrics, shipments feed, alerts, tracking preview
 
-To learn more about Next.js, take a look at the following resources:
+## Realtime Pattern
+- Fetch initial data, subscribe to `postgres_changes` INSERT/UPDATE, clean up with `removeChannel()` (see `app/dashboard/shipments.tsx`)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment & Operations
+- Deploy to Vercel; set env vars in project settings
+- Compatible with Cloudflare/AWS CDNs
+- Add monitoring (Sentry/LogRocket) as needed
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Data Model (core tables)
+- `profiles`/`users`: role (admin/customer), identity
+- `shipments`: details, status, origin/destination, timestamps
+- `shipment_events`: milestone/status updates
+- `notifications`: alerts to users
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Roadmap parity with brief
+- Auth flows live under `/dashboard/auth/*` (login/register/reset/update-password)
+- Role-based protection via proxy and DB policies
+- Realtime shipment updates via Supabase Realtime
+- Tracking map present with fallback; style override via env
+- Admin console available; customer dashboards present

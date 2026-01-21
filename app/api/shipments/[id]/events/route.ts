@@ -1,0 +1,92 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createSupabaseRouteClient } from '@/lib/supabase-route';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import { sendShipmentUpdateEmail } from '@/lib/email';
+
+type ShipmentLookupRow = {
+  id: string;
+  reference_number: string;
+  status: string;
+  company_id: string;
+  customer_id: string;
+};
+
+type ProfileEmailRow = { email: string | null };
+type CompanyNameRow = { name: string | null };
+
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+
+  const body = (await request.json().catch(() => null)) as { event_type?: string; notes?: string | null } | null;
+  const eventType = (body?.event_type || '').trim();
+  const notes = (body?.notes || '').trim();
+
+  if (!eventType) {
+    return NextResponse.json({ error: 'event_type is required' }, { status: 400 });
+  }
+
+  const { supabase, response } = createSupabaseRouteClient(request);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // RLS-gated read proves access.
+  const { data: shipment, error: shipmentErr } = await supabase
+    .from('shipments')
+    .select('id,reference_number,status,company_id,customer_id')
+    .eq('id', id)
+    .single();
+
+  if (shipmentErr || !shipment) {
+    return NextResponse.json({ error: 'Shipment not found' }, { status: 404 });
+  }
+
+  const { error: insertErr } = await supabase.from('shipment_events').insert({
+    shipment_id: id,
+    event_type: eventType,
+    notes: notes || null,
+  });
+
+  if (insertErr) {
+    return NextResponse.json({ error: insertErr.message }, { status: 400 });
+  }
+
+  const shipmentRow = shipment as ShipmentLookupRow;
+  const [{ data: customerProfile }, { data: company }] = await Promise.all([
+    supabaseAdmin
+      .from('profiles')
+      .select('email')
+      .eq('id', shipmentRow.customer_id)
+      .single(),
+    supabaseAdmin
+      .from('companies')
+      .select('name')
+      .eq('id', shipmentRow.company_id)
+      .single(),
+  ]);
+
+  const to = (customerProfile as ProfileEmailRow | null)?.email ?? undefined;
+  const companyName = (company as CompanyNameRow | null)?.name || 'AFGHCO';
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+  const trackingUrl = `${appUrl}/?ref=${encodeURIComponent(shipmentRow.reference_number)}#tracking`;
+
+  if (to) {
+    await sendShipmentUpdateEmail({
+      to,
+      companyName,
+      referenceNumber: shipmentRow.reference_number,
+      status: shipmentRow.status,
+      updateTitle: 'Shipment update',
+      updateBody: `${eventType}${notes ? ` — ${notes}` : ''}`,
+      trackingUrl,
+    });
+  }
+
+  return NextResponse.json({ ok: true }, { headers: response.headers });
+}

@@ -1,0 +1,6 @@
+{
+  "recommendations": [
+    "ms-ossdata.vscode-postgresql",
+    "supabase.supabase"
+  ]
+}

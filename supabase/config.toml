@@ -1,0 +1,25 @@
+project_id = "local"
+
+[db]
+port = 54322
+
+[studio]
+enabled = false
+
+[inbucket]
+enabled = false
+
+[analytics]
+enabled = false
+
+[realtime]
+enabled = false
+
+[storage]
+enabled = false
+
+[auth]
+enabled = true
+
+[functions]
+verify_jwt = false
