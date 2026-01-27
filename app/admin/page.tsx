@@ -191,7 +191,7 @@ export default function AdminPage() {
             Govern users, shipments, and fleet. Use the shortcuts below to jump into operational consoles or export a current view.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link href="/dashboard/shipments" className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 font-semibold text-white">Shipments</Link>
+            <Link href="/admin/shipments" className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 font-semibold text-white">Shipments</Link>
             <Link href="/dashboard/vehicles" className="px-4 py-2 rounded-full border border-slate-700 hover:border-slate-500 font-semibold text-slate-100">Vehicles</Link>
             <Link href="/dashboard/tracking" className="px-4 py-2 rounded-full border border-slate-700 hover:border-slate-500 font-semibold text-slate-100">Tracking</Link>
           </div>

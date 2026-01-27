@@ -260,7 +260,7 @@ export default function ShipmentDetailsPage() {
             </div>
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div id="update-status" className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h2 className="text-xl font-bold">Update status</h2>
             {!user ? (
               <p className="mt-3 text-slate-400">Sign in to update shipments.</p>
@@ -299,7 +299,7 @@ export default function ShipmentDetailsPage() {
             )}
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div id="assignment" className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h2 className="text-xl font-bold">Assign driver / vehicle</h2>
             {!user ? (
               <p className="mt-3 text-slate-400">Sign in to assign shipments.</p>
@@ -359,7 +359,7 @@ export default function ShipmentDetailsPage() {
             )}
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div id="events" className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h2 className="text-xl font-bold">Add event</h2>
             {!user ? (
               <p className="mt-3 text-slate-400">Sign in to add events.</p>

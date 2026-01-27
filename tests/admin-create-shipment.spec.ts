@@ -1,5 +1,4 @@
 import { test, expect } from "@playwright/test";
-import { getE2ESeed } from "./helpers/e2e-seed";
 
 test("Admin can create shipment", async ({ page }) => {
   await page.goto("/dashboard/shipments/new");
