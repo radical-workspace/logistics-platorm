@@ -53,8 +53,13 @@ export interface Shipment {
   destination_address: string;
   dest_lat?: number;
   dest_lng?: number;
+  current_location_label?: string;
+  current_lat?: number;
+  current_lng?: number;
+  last_event_at?: string;
   weight_kg?: number;
   description?: string;
+  assigned_dispatcher_id?: string;
   assigned_vehicle_id?: string;
   assigned_driver_id?: string;
   estimated_delivery?: string;

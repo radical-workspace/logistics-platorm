@@ -22,6 +22,12 @@ type VehicleOption = {
   vehicle_type: string;
 };
 
+type DispatcherOption = {
+  id: string;
+  display_name: string | null;
+  email: string;
+};
+
 export default function AdminShipmentDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -43,6 +49,10 @@ export default function AdminShipmentDetailPage() {
   const [assignedDriverId, setAssignedDriverId] = useState<string>('');
   const [assignedVehicleId, setAssignedVehicleId] = useState<string>('');
   const [assignmentSaving, setAssignmentSaving] = useState(false);
+
+  const [dispatchers, setDispatchers] = useState<DispatcherOption[]>([]);
+  const [assignedDispatcherId, setAssignedDispatcherId] = useState<string>('');
+  const [dispatcherSaving, setDispatcherSaving] = useState(false);
 
   const [eventType, setEventType] = useState('milestone');
   const [eventNotes, setEventNotes] = useState('');
@@ -82,8 +92,9 @@ export default function AdminShipmentDetailPage() {
       setStatus(nextShipment.status);
       setAssignedDriverId(nextShipment.assigned_driver_id ?? '');
       setAssignedVehicleId(nextShipment.assigned_vehicle_id ?? '');
+      setAssignedDispatcherId(nextShipment.assigned_dispatcher_id ?? '');
 
-      const [{ data: eventRows }, driverRowsRes, vehicleRowsRes] = await Promise.all([
+      const [{ data: eventRows }, driverRowsRes, vehicleRowsRes, dispatcherRowsRes] = await Promise.all([
         supabase
           .from('shipment_events')
           .select('*')
@@ -100,12 +111,19 @@ export default function AdminShipmentDetailPage() {
           .select('id,registration_number,vehicle_type')
           .eq('company_id', nextShipment.company_id)
           .order('created_at', { ascending: false }),
+        supabase
+          .from('profiles')
+          .select('id,email,display_name')
+          .eq('role', 'dispatcher')
+          .eq('company_id', nextShipment.company_id)
+          .order('created_at', { ascending: false }),
       ]);
 
       if (!active) return;
       setEvents((eventRows as ShipmentEvent[]) ?? []);
       setDrivers(((driverRowsRes.data ?? []) as DriverOption[]) ?? []);
       setVehicles(((vehicleRowsRes.data ?? []) as VehicleOption[]) ?? []);
+      setDispatchers(((dispatcherRowsRes.data ?? []) as DispatcherOption[]) ?? []);
       setLoading(false);
     };
 
@@ -169,6 +187,36 @@ export default function AdminShipmentDetailPage() {
       toast.error(message);
     } finally {
       setSavingUpdate(false);
+    }
+  };
+
+  const updateDispatcher = async () => {
+    if (!shipmentId) return;
+
+    setDispatcherSaving(true);
+    try {
+      const nextAssignedDispatcher = assignedDispatcherId.trim() || null;
+
+      const res = await apiFetch(`/api/admin/shipments/${encodeURIComponent(shipmentId)}/update`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          assigned_dispatcher_id: nextAssignedDispatcher,
+          notes: nextAssignedDispatcher ? 'Dispatcher assigned' : 'Dispatcher unassigned',
+        }),
+      });
+
+      const json = (await res.json()) as { ok?: boolean; shipment?: Shipment; error?: string };
+      if (!res.ok || !json.ok) throw new Error(json.error || 'Failed to update dispatcher');
+
+      if (json.shipment) setShipment(json.shipment);
+      toast.success('Dispatcher updated');
+      await reloadEvents();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update dispatcher';
+      toast.error(message);
+    } finally {
+      setDispatcherSaving(false);
     }
   };
 
@@ -431,6 +479,45 @@ export default function AdminShipmentDetailPage() {
                 </form>
               </div>
 
+              <div id="dispatcher" className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                <h2 className="text-xl font-bold">Assign dispatcher</h2>
+                <p className="mt-2 text-sm text-slate-400">
+                  Set operational ownership (admin-only).
+                </p>
+
+                <div className="mt-4 grid gap-4">
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-2" htmlFor="assigned_dispatcher">
+                      Dispatcher
+                    </label>
+                    <select
+                      id="assigned_dispatcher"
+                      value={assignedDispatcherId}
+                      onChange={(e) => setAssignedDispatcherId(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
+                    >
+                      <option value="">Unassigned</option>
+                      {dispatchers.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {(d.display_name ? `${d.display_name} — ` : '') + d.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <button
+                      type="button"
+                      disabled={dispatcherSaving}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 transition px-4 py-2 rounded font-semibold"
+                      onClick={() => void updateDispatcher()}
+                    >
+                      {dispatcherSaving ? 'Saving…' : 'Save dispatcher'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div id="assignment" className="bg-slate-900 border border-slate-800 rounded-xl p-6">
                 <h2 className="text-xl font-bold">Assignment</h2>
                 <p className="mt-2 text-sm text-slate-400">Assign a driver and vehicle to the shipment.</p>
@@ -535,4 +622,3 @@ export default function AdminShipmentDetailPage() {
     </main>
   );
 }
-

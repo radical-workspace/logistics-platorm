@@ -211,7 +211,7 @@ export default async function AdminShipmentsPage({
                       Update Location / Add Event
                     </Link>
                     <Link
-                      href={`/admin/shipments/${s.id}#assignment`}
+                      href={`/admin/shipments/${s.id}#dispatcher`}
                       className="bg-slate-950/30 hover:bg-slate-950/50 transition border border-slate-800 rounded px-3 py-2 text-sm font-semibold"
                     >
                       Assign Dispatcher

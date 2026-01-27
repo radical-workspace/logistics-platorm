@@ -9,6 +9,7 @@ type AdminShipmentUpdateBody = {
   current_location_label?: unknown;
   current_lat?: unknown;
   current_lng?: unknown;
+  assigned_dispatcher_id?: unknown;
   notes?: unknown;
 };
 
@@ -39,7 +40,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const locationLabel = String(body?.current_location_label ?? '').trim().slice(0, 140) || null;
   const lat = parseOptionalNumber(body?.current_lat);
   const lng = parseOptionalNumber(body?.current_lng);
+  const assignedDispatcherRaw = String(body?.assigned_dispatcher_id ?? '').trim();
+  const assigned_dispatcher_id = assignedDispatcherRaw ? assignedDispatcherRaw : null;
   const notes = String(body?.notes ?? '').trim().slice(0, 500) || null;
+
+  if (assigned_dispatcher_id && !/^[0-9a-fA-F-]{36}$/.test(assigned_dispatcher_id)) {
+    return NextResponse.json({ ok: false, error: 'Invalid assigned_dispatcher_id' }, { status: 400 });
+  }
 
   if (lat !== null && lng === null) {
     return NextResponse.json({ ok: false, error: 'current_lng is required when current_lat is provided' }, { status: 400 });
@@ -48,7 +55,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ ok: false, error: 'current_lat is required when current_lng is provided' }, { status: 400 });
   }
 
-  if (!status && !locationLabel && lat === null && lng === null && !notes) {
+  if (!status && !locationLabel && lat === null && lng === null && !assigned_dispatcher_id && !notes) {
     return NextResponse.json({ ok: false, error: 'Missing update fields' }, { status: 400 });
   }
 
@@ -90,14 +97,30 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .replace(/\s+/g, '_');
   const statusToApply = status && status !== currentStatus ? status : null;
 
-  if (!statusToApply && !locationLabel && lat === null && lng === null && !notes) {
+  const currentDispatcher = ((shipment as { assigned_dispatcher_id?: unknown } | null)?.assigned_dispatcher_id ?? null) as string | null;
+  const dispatcherToApply =
+    assigned_dispatcher_id !== null && assigned_dispatcher_id !== (currentDispatcher ?? null)
+      ? assigned_dispatcher_id
+      : null;
+
+  if (!statusToApply && !locationLabel && lat === null && lng === null && !dispatcherToApply && !notes) {
     return NextResponse.json({ ok: false, error: 'No changes provided' }, { status: 400, headers: response.headers });
   }
 
-  if (statusToApply) {
+  const shipmentUpdate: Record<string, unknown> = {};
+  if (statusToApply) shipmentUpdate.status = statusToApply;
+  if (locationLabel) shipmentUpdate.current_location_label = locationLabel;
+  if (lat !== null && lng !== null) {
+    shipmentUpdate.current_lat = lat;
+    shipmentUpdate.current_lng = lng;
+    shipmentUpdate.last_event_at = new Date().toISOString();
+  }
+  if (dispatcherToApply !== null) shipmentUpdate.assigned_dispatcher_id = dispatcherToApply;
+
+  if (Object.keys(shipmentUpdate).length > 0) {
     const { data: updated, error: updateErr } = await supabaseAdmin
       .from('shipments')
-      .update({ status: statusToApply })
+      .update(shipmentUpdate)
       .eq('id', id)
       .select('*')
       .single();
@@ -115,7 +138,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return parts.join(' — ').slice(0, 500);
   })();
 
-  const event_type = statusToApply ?? 'location_update';
+  const event_type = statusToApply ?? (dispatcherToApply !== null ? 'dispatcher_assignment' : 'location_update');
 
   const { data: event, error: eventErr } = await supabaseAdmin
     .from('shipment_events')
@@ -124,7 +147,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       event_type,
       latitude: lat,
       longitude: lng,
-      notes: combinedNotes,
+      notes:
+        combinedNotes ??
+        (dispatcherToApply !== null ? `Assigned dispatcher=${dispatcherToApply || 'none'}` : null),
       created_by: user.id,
     })
     .select('id,shipment_id,event_type,latitude,longitude,notes,created_by,created_at')
