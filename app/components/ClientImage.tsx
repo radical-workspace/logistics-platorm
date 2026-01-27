@@ -5,7 +5,13 @@ import type { ImgHTMLAttributes } from 'react';
 
 type ClientImageProps = ImgHTMLAttributes<HTMLImageElement> & { fallbackSrc?: string };
 
-export default function ClientImage({ alt = '', priority, fallbackSrc = '/hero-home.jpg', ...props }: ClientImageProps & { priority?: boolean }) {
+export default function ClientImage({
+  alt = '',
+  priority: _priority,
+  fallbackSrc = '/hero-home.jpg',
+  ...props
+}: ClientImageProps & { priority?: boolean }) {
+  void _priority;
   // Remove 'priority' before passing to <img>
   return (
     <img

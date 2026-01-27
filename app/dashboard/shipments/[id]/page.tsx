@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { supabase } from '@/lib/supabaseclient';
-import type { Shipment, ShipmentEvent } from '@/lib/types';
+import { supabase } from '@/lib/client/supabaseclient';
+import type { Shipment, ShipmentEvent } from '@/lib/shared/types';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { useAuth } from '@/app/auth/AuthProvider';
-import { apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/client/api';
 
 type EventFormState = {
   event_type: string;
@@ -54,8 +54,8 @@ export default function ShipmentDetailsPage() {
   const [assignedDriverId, setAssignedDriverId] = useState<string>('');
   const [assignedVehicleId, setAssignedVehicleId] = useState<string>('');
 
-  const canAddEvent = profile?.role === 'admin' || profile?.role === 'dispatcher' || profile?.role === 'driver';
-  const canUpdateShipment = profile?.role === 'admin' || profile?.role === 'dispatcher';
+  const canAddEvent = !!user && (!profile || profile.role === 'admin' || profile.role === 'dispatcher' || profile.role === 'driver');
+  const canUpdateShipment = !!user && profile?.role === 'admin';
 
   const title = useMemo(() => {
     if (!shipment) return 'Shipment';
@@ -278,11 +278,11 @@ export default function ShipmentDetailsPage() {
                     onChange={(e) => setNextStatus(e.target.value as ShipmentStatus)}
                     className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
                   >
-                    <option value="pending">pending</option>
-                    <option value="picked_up">picked_up</option>
-                    <option value="in_transit">in_transit</option>
-                    <option value="delivered">delivered</option>
-                    <option value="cancelled">cancelled</option>
+                    <option value="pending">Pending</option>
+                    <option value="picked_up">Picked up</option>
+                    <option value="in_transit">In transit</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
                 <div>
@@ -466,3 +466,4 @@ export default function ShipmentDetailsPage() {
     </main>
   );
 }
+

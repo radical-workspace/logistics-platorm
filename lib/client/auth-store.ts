@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Profile } from './types';
+import { Profile } from '../shared/types';
 
 interface AuthStore {
   user: Profile | null;

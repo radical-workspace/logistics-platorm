@@ -9,5 +9,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     clearMocks: true,
+    include: ['app/**/*.{test,spec}.{ts,tsx}', 'lib/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['tests/**', '**/node_modules/**', '**/dist/**', '**/.next/**'],
   },
 });

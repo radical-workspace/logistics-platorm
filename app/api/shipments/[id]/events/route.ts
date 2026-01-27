@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseRouteClient } from '@/lib/supabase-route';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { sendShipmentUpdateEmail } from '@/lib/email';
+import { createSupabaseRouteClient } from '@/lib/server/supabase-route';
+import { supabaseAdmin } from '@/lib/server/supabase-admin';
+import { sendShipmentUpdateEmail } from '@/lib/server/email';
+import { publicEnv } from '@/lib/env/public';
 
 type ShipmentLookupRow = {
   id: string;
@@ -73,20 +74,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const to = (customerProfile as ProfileEmailRow | null)?.email ?? undefined;
   const companyName = (company as CompanyNameRow | null)?.name || 'AFGHCO';
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+  const appUrl = publicEnv.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
   const trackingUrl = `${appUrl}/?ref=${encodeURIComponent(shipmentRow.reference_number)}#tracking`;
 
   if (to) {
-    await sendShipmentUpdateEmail({
-      to,
-      companyName,
-      referenceNumber: shipmentRow.reference_number,
-      status: shipmentRow.status,
-      updateTitle: 'Shipment update',
-      updateBody: `${eventType}${notes ? ` — ${notes}` : ''}`,
-      trackingUrl,
-    });
+    try {
+      await sendShipmentUpdateEmail({
+        to,
+        companyName,
+        referenceNumber: shipmentRow.reference_number,
+        status: shipmentRow.status,
+        updateTitle: 'Shipment update',
+        updateBody: `${eventType}${notes ? ` - ${notes}` : ''}`,
+        trackingUrl,
+      });
+    } catch (err) {
+      console.warn('sendShipmentUpdateEmail failed', err);
+    }
   }
 
   return NextResponse.json({ ok: true }, { headers: response.headers });
 }
+

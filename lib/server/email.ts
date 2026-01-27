@@ -2,6 +2,8 @@ import 'server-only';
 
 import { Resend } from 'resend';
 
+import { serverEnv } from '@/lib/env/server';
+
 export type ShipmentUpdateEmailInput = {
   to: string;
   companyName: string;
@@ -64,14 +66,14 @@ function buildShipmentUpdateHtml(input: ShipmentUpdateEmailInput) {
 }
 
 export async function sendShipmentUpdateEmail(input: ShipmentUpdateEmailInput) {
-  const apiKey = process.env.RESEND_API_KEY || '';
+  const apiKey = serverEnv.RESEND_API_KEY || '';
   if (!apiKey) {
-    // Do not crash local/dev if email isn’t configured.
+    // Do not crash local/dev if email isn't configured.
     console.warn('RESEND_API_KEY missing; skipping email send');
     return { skipped: true as const };
   }
 
-  const from = process.env.EMAIL_FROM || 'AFGHCO <onboarding@resend.dev>';
+  const from = serverEnv.EMAIL_FROM || 'AFGHCO <onboarding@resend.dev>';
   const resend = new Resend(apiKey);
 
   await resend.emails.send({

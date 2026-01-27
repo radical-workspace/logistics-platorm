@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseRouteClient } from '@/lib/supabase-route';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createSupabaseRouteClient } from '@/lib/server/supabase-route';
+import { supabaseAdmin } from '@/lib/server/supabase-admin';
 
 function toCsvValue(value: unknown) {
   if (value === null || value === undefined) return '';
@@ -129,3 +129,4 @@ export async function GET(request: NextRequest, context: { params: Promise<{ exp
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

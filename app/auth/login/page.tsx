@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { supabase } from '@/lib/supabaseclient';
-import { loginSchema } from '@/lib/validators';
+import { loginSchema } from '@/lib/shared/validators';
+import { useAuth } from '@/app/auth/AuthProvider';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { signIn } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
 
@@ -18,32 +19,12 @@ export default function LoginPage() {
     try {
       loginSchema.parse(formData);
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      });
+      const { error } = await signIn(formData.email, formData.password);
 
       if (error) throw error;
 
-      let destination = '/dashboard';
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user?.id) {
-        const { data: profileRow } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        if (profileRow?.role === 'admin') {
-          destination = '/admin';
-        }
-      }
-
       toast.success('Signed in');
-      router.push(destination);
+      router.push('/dashboard');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Login failed';
       toast.error(message);
@@ -104,3 +85,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

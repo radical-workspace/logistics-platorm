@@ -13,4 +13,16 @@ test('Admin can login', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/dashboard(\/|$)/, { timeout: 15_000 });
   await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
+
+  const cookies = await page.context().cookies();
+  const accessToken =
+    cookies.find((cookie) => cookie.name === 'sb-access-token')?.value ??
+    cookies.find((cookie) => cookie.name.endsWith('-access-token'))?.value;
+  expect(accessToken, 'Missing access token cookie').toBeTruthy();
+
+  const overviewRes = await page.request.get('/api/dashboard/overview', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const overviewText = await overviewRes.text();
+  expect(overviewRes.ok(), `overview failed: ${overviewRes.status()} ${overviewText}`).toBeTruthy();
 });

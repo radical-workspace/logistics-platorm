@@ -82,7 +82,7 @@ export default function Page() {
             </div>
             {/* Image */}
             <ClientImage
-              src="/og-warehousing.jpg"
+              src="/og-platform-1.jpg"
               alt="Warehousing Facility"
               className="rounded-2xl shadow-xl"
             />
@@ -94,7 +94,7 @@ export default function Page() {
           <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
             {/* Image */}
             <ClientImage
-              src="/og-global-freight.jpg"
+              src="/og-solutions-1.jpg"
               alt="Global Freight Shipping"
               className="rounded-2xl shadow-xl"
             />
@@ -132,7 +132,7 @@ export default function Page() {
             </div>
             {/* Image */}
             <ClientImage
-              src="/og-supply-chain.jpg"
+              src="/illustration-integrated-flow.png"
               alt="Supply Chain Management"
               className="rounded-2xl shadow-xl"
             />

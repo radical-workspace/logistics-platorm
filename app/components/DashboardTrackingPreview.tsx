@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import TrackingMap from '@/app/components/TrackingMap';
-import { apiFetch } from '@/lib/api';
+import SimulatedMapPreview from '@/app/components/SimulatedMapPreview';
+import { apiFetch } from '@/lib/client/api';
 
 type TrackShipmentRow = {
   shipment_id: string;
@@ -114,15 +115,22 @@ export default function DashboardTrackingPreview() {
         </div>
       </div>
 
-      <TrackingMap
-        origin={{ lat: row?.origin_lat ?? null, lng: row?.origin_lng ?? null, label: row?.origin_address }}
-        destination={{ lat: row?.dest_lat ?? null, lng: row?.dest_lng ?? null, label: row?.destination_address }}
-        lastEvent={{
-          lat: row?.last_event_lat ?? null,
-          lng: row?.last_event_lng ?? null,
-          label: row?.last_event_type ? `Last update: ${row.last_event_type}` : undefined,
-        }}
-      />
+      {row ? (
+        <TrackingMap
+          origin={{ lat: row.origin_lat ?? null, lng: row.origin_lng ?? null, label: row.origin_address }}
+          destination={{ lat: row.dest_lat ?? null, lng: row.dest_lng ?? null, label: row.destination_address }}
+          lastEvent={{
+            lat: row.last_event_lat ?? null,
+            lng: row.last_event_lng ?? null,
+            label: row.last_event_type ? `Last update: ${row.last_event_type}` : undefined,
+          }}
+        />
+      ) : (
+        <SimulatedMapPreview
+          subtitle={hasRef ? 'Waiting for tracking data…' : 'Simulated map view (mobile-first)'}
+        />
+      )}
     </div>
   );
 }
+

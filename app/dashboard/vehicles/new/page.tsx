@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { supabase } from '@/lib/supabaseclient';
+import { supabase } from '@/lib/client/supabaseclient';
 import { useAuth } from '@/app/auth/AuthProvider';
 
 type FormState = {
@@ -168,3 +168,4 @@ export default function NewVehiclePage() {
     </main>
   );
 }
+

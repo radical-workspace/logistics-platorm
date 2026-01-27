@@ -1,7 +1,7 @@
 -- Support tickets for customer escalations
 
 create table if not exists public.support_tickets (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   created_by uuid not null references public.profiles(id) on delete cascade,
   subject text not null,
   message text not null,

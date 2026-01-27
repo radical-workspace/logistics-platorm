@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/app/auth/AuthProvider';
 import DashboardTrackingPreview from '@/app/components/DashboardTrackingPreview';
-import { apiFetch, apiUrl } from '@/lib/api';
+import { apiFetch, apiUrl } from '@/lib/client/api';
+import { supabase } from '@/lib/client/supabaseclient';
 
 import type { OverviewResponse } from '@/app/dashboard/page';
 
@@ -39,7 +40,18 @@ export default function AdminPage() {
 
     const run = async () => {
       try {
-        const res = await apiFetch('/api/dashboard/overview');
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (!accessToken) {
+          if (!active) return;
+          setOverview(null);
+          setOverviewError('Missing access token');
+          return;
+        }
+
+        const res = await fetch('/api/dashboard/overview', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
         const json = (await res.json()) as OverviewResponse & { error?: string };
         if (!active) return;
         if (!res.ok) {
@@ -282,9 +294,9 @@ export default function AdminPage() {
             <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
               <h2 className="text-2xl font-black">Controls</h2>
               <ul className="mt-4 space-y-3 text-sm text-slate-300">
-                <li>• Review shipments and update statuses in Shipments.</li>
-                <li>• Assign drivers and vehicles to consignments.</li>
-                <li>• Manage vehicle registry in Vehicles.</li>
+                <li>Review shipments and update statuses in Shipments.</li>
+                <li>Assign drivers and vehicles to consignments.</li>
+                <li>Manage vehicle registry in Vehicles.</li>
               </ul>
             </section>
           </div>
@@ -362,3 +374,5 @@ export default function AdminPage() {
     </main>
   );
 }
+
+

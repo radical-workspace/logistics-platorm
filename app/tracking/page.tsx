@@ -1,8 +1,11 @@
 import Link from 'next/link';
 import Header from '@/app/composer/Header';
-import { createSupabasePublicServerClient } from '@/lib/supabase-public-server';
+import { createSupabasePublicServerClient } from '@/lib/server/supabase-public-server';
 import TrackingLiveClient from '@/app/tracking/TrackingLiveClient';
 import Footer from '@/app/components/Footer';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 type TrackShipmentRow = {
   shipment_id: string;
@@ -86,3 +89,4 @@ export default async function TrackingPage({
     </>
   );
 }
+

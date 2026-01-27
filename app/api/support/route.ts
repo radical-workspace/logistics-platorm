@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createSupabaseRouteClient } from '@/lib/supabase-route';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createSupabaseRouteClient } from '@/lib/server/supabase-route';
+import { supabaseAdmin } from '@/lib/server/supabase-admin';
+import { logError } from '@/lib/server/logger';
 
 const TicketSchema = z.object({
   subject: z.string().min(3).max(200),
@@ -10,6 +11,7 @@ const TicketSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const requestId = request.headers.get('x-request-id');
   try {
     const { supabase, response } = createSupabaseRouteClient(request);
     const { data: userData } = await supabase.auth.getUser();
@@ -40,6 +42,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
+      logError('support_ticket_insert_failed', { requestId, userId: user.id, route: '/api/support' }, { error: error.message });
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -54,6 +57,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ticket: data }, { status: 201, headers: response.headers });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unexpected error';
+    logError('support_ticket_unhandled', { requestId, route: '/api/support' }, { error: message });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

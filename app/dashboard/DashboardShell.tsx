@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/app/auth/AuthProvider';
 
 type NavItem = {
@@ -16,6 +16,14 @@ type DashboardShellProps = {
   initialUserEmail?: string | null;
   initialRole?: string | null;
 };
+
+const NAV_ITEMS: NavItem[] = [
+  { href: '/dashboard', label: 'Home' },
+  { href: '/dashboard/shipments', label: 'Shipments' },
+  { href: '/dashboard/vehicles', label: 'Vehicles' },
+  { href: '/dashboard/tracking', label: 'Tracking' },
+  { href: '/admin', label: 'Admin', adminOnly: true },
+];
 
 export default function DashboardShell({
   children,
@@ -31,22 +39,12 @@ export default function DashboardShell({
   if (pathname.startsWith('/dashboard/auth')) {
     return <>{children}</>;
   }
-  const items: NavItem[] = useMemo(
-    () => [
-      { href: '/dashboard', label: 'Home' },
-      { href: '/dashboard/shipments', label: 'Shipments' },
-      { href: '/dashboard/vehicles', label: 'Vehicles' },
-      { href: '/dashboard/tracking', label: 'Tracking' },
-      { href: '/admin', label: 'Admin', adminOnly: true },
-    ],
-    []
-  );
 
   const effectiveEmail = user?.email ?? initialUserEmail ?? null;
   const effectiveRole = profile?.role ?? initialRole ?? null;
 
   const isAdmin = effectiveRole === 'admin';
-  const filtered = items.filter((i) => !i.adminOnly || isAdmin);
+  const filtered = NAV_ITEMS.filter((i) => !i.adminOnly || isAdmin);
   const canShowUser = !!effectiveEmail && !isLoading;
 
   const onSignOut = async () => {

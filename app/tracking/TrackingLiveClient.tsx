@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import TrackingMap from '@/app/components/TrackingMap';
-import { createApiEventSource } from '@/lib/api';
+import { supabaseBrowser } from '@/lib/client/supabase';
 
 type TrackShipmentRow = {
   shipment_id: string;
@@ -38,29 +38,55 @@ export default function TrackingLiveClient({
     return `Last update: ${row.last_event_type}`;
   }, [row.last_event_type]);
 
+  const fetchSnapshot = async (ref: string) => {
+    const res = await fetch(`/api/track/snapshot?ref=${encodeURIComponent(ref)}`, { cache: 'no-store' });
+    const json = (await res.json()) as { row?: TrackShipmentRow; error?: string };
+    if (!res.ok) throw new Error(json?.error || 'Snapshot failed');
+    if (!json.row) throw new Error('Snapshot missing');
+    return json.row;
+  };
+
   useEffect(() => {
-    const url = `/api/track/stream?ref=${encodeURIComponent(reference)}`;
-    const source = createApiEventSource(url);
+    let channel: ReturnType<(typeof supabaseBrowser)['channel']> | null = null;
+    let cancelled = false;
 
-    const onSnapshot = (event: MessageEvent) => {
+    (async () => {
       try {
-        const payload = JSON.parse(event.data) as { row: TrackShipmentRow };
-        if (payload?.row) setRow(payload.row);
-      } catch {
-        // ignore
+        setStreamError(null);
+
+        const first = await fetchSnapshot(reference);
+        if (cancelled) return;
+        setRow(first);
+
+        channel = supabaseBrowser
+          .channel(`tracking:${first.shipment_id}`)
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'shipment_events', filter: `shipment_id=eq.${first.shipment_id}` },
+            async () => {
+              try {
+                const next = await fetchSnapshot(reference);
+                if (!cancelled) setRow(next);
+              } catch (e: unknown) {
+                const message = e instanceof Error ? e.message : 'Live update failed';
+                if (!cancelled) setStreamError(message);
+              }
+            }
+          )
+          .subscribe((status) => {
+            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              setStreamError('Realtime disconnected; showing last known position.');
+            }
+          });
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Live tracking failed';
+        if (!cancelled) setStreamError(message);
       }
-    };
-
-    const onError = () => {
-      setStreamError('Realtime stream disconnected; showing last known position.');
-      source.close();
-    };
-
-    source.addEventListener('snapshot', onSnapshot as EventListener);
-    source.addEventListener('error', onError);
+    })();
 
     return () => {
-      source.close();
+      cancelled = true;
+      if (channel) supabaseBrowser.removeChannel(channel);
     };
   }, [reference]);
 
@@ -120,3 +146,4 @@ export default function TrackingLiveClient({
     </div>
   );
 }
+

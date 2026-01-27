@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseRouteClient } from '@/lib/supabase-route';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createSupabaseRouteClient } from '@/lib/server/supabase-route';
+import { supabaseAdmin } from '@/lib/server/supabase-admin';
 
 type AuditRow = {
   id: string;
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: response.headers });
     }
 
     const { data: profile, error: profileError } = await supabase
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (profileError || !profile || profile.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers: response.headers });
     }
 
     const { data: rows, error } = await supabaseAdmin
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       .limit(25);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: error.message }, { status: 500, headers: response.headers });
     }
 
     const auditRows = (rows ?? []) as AuditRow[];
@@ -72,3 +72,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

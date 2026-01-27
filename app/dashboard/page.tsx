@@ -6,7 +6,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/app/auth/AuthProvider';
 import DashboardTrackingPreview from '@/app/components/DashboardTrackingPreview';
-import { apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/client/api';
+import { supabase } from '@/lib/client/supabaseclient';
 
 export type OverviewResponse = {
   profile: {
@@ -63,7 +64,18 @@ export default function DashboardHomePage() {
 
     const run = async () => {
       try {
-        const res = await apiFetch('/api/dashboard/overview');
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (!accessToken) {
+          if (!active) return;
+          setOverview(null);
+          setOverviewError('Missing access token');
+          return;
+        }
+
+        const res = await fetch('/api/dashboard/overview', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
         const json = (await res.json()) as OverviewResponse & { error?: string };
         if (!active) return;
         if (!res.ok) {
@@ -400,3 +412,4 @@ export default function DashboardHomePage() {
     </main>
   );
 }
+

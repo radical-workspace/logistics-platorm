@@ -8,22 +8,17 @@
     - generic [ref=e6]:
       - generic [ref=e7]:
         - generic [ref=e8]: Email
-        - textbox "name@example.com" [ref=e9]: e2e-admin@afghco.test
+        - textbox "name@example.com" [ref=e9]
       - generic [ref=e10]:
         - generic [ref=e11]: Password
-        - textbox "••••••••" [ref=e12]: AdminPassword123!
+        - textbox "••••••••" [ref=e12]
       - button "Sign in" [ref=e13]
     - generic [ref=e14]:
       - link "Forgot password?" [ref=e15] [cursor=pointer]:
-        - /url: /auth/reset
+        - /url: /dashboard/auth/reset
       - link "Create account" [ref=e16] [cursor=pointer]:
-        - /url: /auth/register
+        - /url: /dashboard/auth/register
   - button "Open Next.js Dev Tools" [ref=e22] [cursor=pointer]:
-    - generic [ref=e25]:
-      - text: Compiling
-      - generic [ref=e26]:
-        - generic [ref=e27]: .
-        - generic [ref=e28]: .
-        - generic [ref=e29]: .
-  - alert [ref=e30]
+    - img [ref=e23]
+  - alert [ref=e26]
 ```

@@ -53,7 +53,17 @@ export default function TrackingMap({ origin, destination, lastEvent }: Tracking
           ? { lat: lastLat, lng: lastLng, label: lastEvent?.label }
           : null,
     };
-  }, [origin.lat, origin.lng, destination.lat, destination.lng, lastEvent?.lat, lastEvent?.lng]);
+  }, [
+    origin.lat,
+    origin.lng,
+    origin.label,
+    destination.lat,
+    destination.lng,
+    destination.label,
+    lastEvent?.lat,
+    lastEvent?.lng,
+    lastEvent?.label,
+  ]);
 
   const resolved = useMemo(() => {
     const hasAny = points.origin || points.destination || points.lastEvent;

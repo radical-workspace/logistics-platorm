@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseclient';
-import { newPasswordSchema } from '@/lib/validators';
+import { supabase } from '@/lib/client/supabaseclient';
+import { newPasswordSchema } from '@/lib/shared/validators';
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
@@ -100,3 +100,4 @@ export default function UpdatePasswordPage() {
     </div>
   );
 }
+

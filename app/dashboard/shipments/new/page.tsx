@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { supabase } from '@/lib/supabaseclient';
 import { useAuth } from '@/app/auth/AuthProvider';
-import { shipmentSchema } from '@/lib/validators';
+import { shipmentSchema } from '@/lib/shared/validators';
+import { apiFetch } from '@/lib/client/api';
 
 type FormState = {
   company_id: string;
@@ -20,9 +20,9 @@ type FormState = {
 
 export default function NewShipmentPage() {
   const router = useRouter();
-  const { profile, isLoading } = useAuth();
+  const { user, profile, isLoading } = useAuth();
 
-  const canCreate = profile?.role === 'admin' || profile?.role === 'dispatcher';
+  const canCreate = !!user && !!profile && (profile.role === 'admin' || profile.role === 'dispatcher');
 
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FormState>({
@@ -35,6 +35,11 @@ export default function NewShipmentPage() {
     description: '',
     estimated_delivery: '',
   });
+
+  useEffect(() => {
+    if (!profile?.company_id) return;
+    setForm((prev) => (prev.company_id ? prev : { ...prev, company_id: profile.company_id ?? '' }));
+  }, [profile?.company_id]);
 
   const parsedWeight = useMemo(() => {
     const trimmed = form.weight_kg.trim();
@@ -51,6 +56,12 @@ export default function NewShipmentPage() {
       return;
     }
 
+    const companyId = profile?.company_id?.trim() || '';
+    if (!companyId) {
+      toast.error('Missing company ID on your profile');
+      return;
+    }
+
     setSaving(true);
     try {
       shipmentSchema.parse({
@@ -61,25 +72,25 @@ export default function NewShipmentPage() {
         estimated_delivery: form.estimated_delivery || undefined,
       });
 
-      const { data, error } = await supabase
-        .from('shipments')
-        .insert({
-          company_id: form.company_id,
+      const res = await apiFetch('/api/dashboard/shipments', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
           customer_id: form.customer_id,
           reference_number: form.reference_number,
           origin_address: form.origin_address,
           destination_address: form.destination_address,
           weight_kg: parsedWeight ?? null,
           description: form.description || null,
-          estimated_delivery: form.estimated_delivery ? new Date(form.estimated_delivery).toISOString() : null,
-        })
-        .select('id')
-        .single();
+          estimated_delivery: form.estimated_delivery || null,
+        }),
+      });
 
-      if (error) throw error;
+      const json = (await res.json()) as { id?: string; error?: string };
+      if (!res.ok || !json.id) throw new Error(json.error || 'Failed to create shipment');
 
       toast.success('Shipment created');
-      router.push(`/dashboard/shipments/${data.id}`);
+      router.push(`/dashboard/shipments/${json.id}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to create shipment';
       toast.error(message);
@@ -93,6 +104,15 @@ export default function NewShipmentPage() {
       <main className="min-h-screen bg-slate-950 text-slate-100 p-8">
         <h1 className="text-3xl font-black">New shipment</h1>
         <p className="mt-2 text-slate-400">Loading…</p>
+      </main>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <main className="min-h-screen bg-slate-950 text-slate-100 p-8">
+        <h1 className="text-3xl font-black">New shipment</h1>
+        <p className="mt-2 text-slate-400">Profile not loaded.</p>
       </main>
     );
   }
@@ -119,8 +139,11 @@ export default function NewShipmentPage() {
             </label>
             <input
               id="company_id"
+              name="company_id"
+              aria-label="Customer ID"
               value={form.company_id}
               onChange={(e) => setForm((f) => ({ ...f, company_id: e.target.value }))}
+              readOnly
               className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
               placeholder="UUID"
             />
@@ -146,6 +169,7 @@ export default function NewShipmentPage() {
             </label>
             <input
               id="reference_number"
+              name="reference_number"
               value={form.reference_number}
               onChange={(e) => setForm((f) => ({ ...f, reference_number: e.target.value }))}
               className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
@@ -242,3 +266,4 @@ export default function NewShipmentPage() {
     </main>
   );
 }
+

@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { supabase } from '@/lib/supabaseclient';
-import { loginSchema } from '@/lib/validators';
+import { loginSchema } from '@/lib/shared/validators';
+import { useAuth } from '@/app/auth/AuthProvider';
 
 export default function DashboardLoginPage() {
 	const router = useRouter();
+	const { signIn } = useAuth();
 	const [loading, setLoading] = useState(false);
 	const [formData, setFormData] = useState({ email: '', password: '' });
 
@@ -18,10 +19,7 @@ export default function DashboardLoginPage() {
 		try {
 			loginSchema.parse(formData);
 
-			const { error } = await supabase.auth.signInWithPassword({
-				email: formData.email,
-				password: formData.password,
-			});
+			const { error } = await signIn(formData.email, formData.password);
 
 			if (error) throw error;
 
@@ -87,3 +85,4 @@ export default function DashboardLoginPage() {
 		</div>
 	);
 }
+

@@ -2,146 +2,23 @@
 
 ```yaml
 - generic [active] [ref=e1]:
-  - generic [ref=e2]:
-    - banner [ref=e3]:
-      - generic [ref=e4]:
-        - generic [ref=e6]:
-          - generic [ref=e7]: Dashboard
-          - generic [ref=e8]: e2e-admin@afghco.test
-        - generic [ref=e9]:
-          - navigation [ref=e10]:
-            - link "Home" [ref=e11] [cursor=pointer]:
-              - /url: /dashboard
-            - link "Shipments" [ref=e12] [cursor=pointer]:
-              - /url: /dashboard/shipments
-            - link "Vehicles" [ref=e13] [cursor=pointer]:
-              - /url: /dashboard/vehicles
-            - link "Tracking" [ref=e14] [cursor=pointer]:
-              - /url: /dashboard/tracking
-          - button "Sign out" [ref=e15]
-    - main [ref=e17]:
-      - generic [ref=e18]:
-        - generic [ref=e19]:
-          - generic [ref=e20]:
-            - paragraph [ref=e21]: Operations Command Centre
-            - heading "Welcome back to the control tower" [level=1] [ref=e22]
-            - paragraph [ref=e23]: Monitor network performance, track live consignments, and coordinate multimodal moves directly from your AFGHCO mission console.
-          - generic [ref=e24]:
-            - generic [ref=e25]:
-              - paragraph [ref=e26]: Active consignments
-              - paragraph [ref=e27]: "0"
-              - paragraph [ref=e28]: Currently airborne / en route
-            - generic [ref=e29]:
-              - paragraph [ref=e30]: Deliveries cleared
-              - paragraph [ref=e31]: "0"
-              - paragraph [ref=e32]: Completed in the past cycle
-            - generic [ref=e33]:
-              - paragraph [ref=e34]: Pending release
-              - paragraph [ref=e35]: "0"
-              - paragraph [ref=e36]: Awaiting customs or dispatch
-            - generic [ref=e37]:
-              - paragraph [ref=e38]: Fleet ready
-              - paragraph [ref=e39]: "0"
-              - paragraph [ref=e40]: Vehicles available within SLA
-        - generic [ref=e41]: Profile missing
-        - generic [ref=e42]:
-          - generic [ref=e43]:
-            - generic [ref=e44]:
-              - generic [ref=e46]:
-                - heading "Network status" [level=2] [ref=e47]
-                - paragraph [ref=e48]: 0 consignments under management.
-              - generic [ref=e49]:
-                - generic [ref=e50]:
-                  - heading "Live consignments" [level=3] [ref=e51]
-                  - paragraph [ref=e52]: Flights and convoys tracked with live telemetry and alerts for customs, weather, and risk advisories.
-                  - list [ref=e53]:
-                    - listitem [ref=e54]: • Satellite-backed visibility across Afghan air corridors
-                    - listitem [ref=e55]: • Escalation protocols for SLA deviation and route variance
-                    - listitem [ref=e56]: • Automated status messaging to government and NGO stakeholders
-                - generic [ref=e57]:
-                  - heading "Readiness posture" [level=3] [ref=e58]
-                  - paragraph [ref=e59]: Fleet, crews, and bonded storage aligned with today’s uplift plan and humanitarian air bridge commitments.
-                  - list [ref=e60]:
-                    - listitem [ref=e61]: • Kabul, Kandahar, and Mazar distribution hubs fully staffed
-                    - listitem [ref=e62]: • Medical supply lane secured with cold-chain validation
-                    - listitem [ref=e63]: • Border documentation packages pre-cleared and archived
-            - generic [ref=e64]:
-              - generic [ref=e65]:
-                - heading "Recent consignments" [level=2] [ref=e66]
-                - generic [ref=e67]: Live feed
-              - list [ref=e68]:
-                - listitem [ref=e69]: No consignments yet — once bookings are raised they will appear here automatically.
-          - generic [ref=e70]:
-            - generic [ref=e71]:
-              - heading "Mission alerts" [level=2] [ref=e72]
-              - list [ref=e73]:
-                - listitem [ref=e74]: No event alerts just yet. Realtime milestones will stream here as consignments update.
-            - generic [ref=e75]:
-              - generic [ref=e76]:
-                - heading "Notifications" [level=2] [ref=e77]
-                - generic [ref=e78]: Realtime
-              - list
-            - generic [ref=e79]:
-              - heading "Control checklist" [level=2] [ref=e80]
-              - list [ref=e81]:
-                - listitem [ref=e82]: • Verify customs dossiers issued for outbound flights
-                - listitem [ref=e83]: • Confirm humanitarian cargo separation protocols
-                - listitem [ref=e84]: • Sync convoy manifests with provincial security partners
-                - listitem [ref=e85]: • Validate telematics uptime across cold-chain fleet
-            - generic [ref=e86]:
-              - generic [ref=e87]:
-                - generic [ref=e88]:
-                  - heading "Support" [level=2] [ref=e89]
-                  - paragraph [ref=e90]: Need ops support or escalation? Raise a ticket with mission control.
-                - generic [ref=e91]: 24/7
-              - generic [ref=e92]:
-                - generic [ref=e93]:
-                  - text: Subject
-                  - textbox "Subject" [ref=e94]:
-                    - /placeholder: e.g., Cold chain sensor alert
-                - generic [ref=e96]:
-                  - text: Priority
-                  - combobox "Priority" [ref=e97]:
-                    - option "Low"
-                    - option "Normal" [selected]
-                    - option "High"
-                - generic [ref=e98]:
-                  - text: Message
-                  - textbox "Message" [ref=e99]:
-                    - /placeholder: Describe the issue, route, and consignments impacted
-                - button "Submit support ticket" [ref=e100]
-        - generic [ref=e102]:
-          - generic [ref=e103]:
-            - generic [ref=e104]:
-              - generic [ref=e105]: Tracking preview
-              - paragraph [ref=e106]: Enter a reference number to preview tracking.
-            - generic [ref=e107]:
-              - 'textbox "Reference #" [ref=e108]'
-              - button "Track" [disabled] [ref=e109]
-          - generic [ref=e110]:
-            - generic [ref=e111]: Map
-            - generic [ref=e112]:
-              - generic:
-                - region "Map" [ref=e113]
-                - generic "Map marker" [ref=e114]:
-                  - img [ref=e115]
-                - generic "Map marker" [ref=e133]:
-                  - img [ref=e134]
-                - generic "Map marker" [ref=e152]:
-                  - img [ref=e153]
-              - group [ref=e171]:
-                - generic "Toggle attribution" [ref=e172] [cursor=pointer]
-                - generic [ref=e173]:
-                  - link "MapLibre" [ref=e174] [cursor=pointer]:
-                    - /url: https://maplibre.org/
-                  - text: "| ©"
-                  - link "CARTO" [ref=e175] [cursor=pointer]:
-                    - /url: https://carto.com/about-carto/
-                  - text: ", ©"
-                  - link "OpenStreetMap" [ref=e176] [cursor=pointer]:
-                    - /url: http://www.openstreetmap.org/about/
-                  - text: contributors
-  - button "Open Next.js Dev Tools" [ref=e182] [cursor=pointer]:
-    - img [ref=e183]
-  - alert [ref=e186]
+  - generic [ref=e3]:
+    - heading "Welcome back" [level=1] [ref=e4]
+    - paragraph [ref=e5]: Sign in to AFGHCO Logistics
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]: Email
+        - textbox "name@example.com" [ref=e9]
+      - generic [ref=e10]:
+        - generic [ref=e11]: Password
+        - textbox "••••••••" [ref=e12]
+      - button "Sign in" [ref=e13]
+    - generic [ref=e14]:
+      - link "Forgot password?" [ref=e15] [cursor=pointer]:
+        - /url: /dashboard/auth/reset
+      - link "Create account" [ref=e16] [cursor=pointer]:
+        - /url: /dashboard/auth/register
+  - button "Open Next.js Dev Tools" [ref=e22] [cursor=pointer]:
+    - img [ref=e23]
+  - alert [ref=e26]
 ```

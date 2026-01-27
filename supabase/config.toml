@@ -20,6 +20,3 @@ enabled = false
 
 [auth]
 enabled = true
-
-[functions]
-verify_jwt = false

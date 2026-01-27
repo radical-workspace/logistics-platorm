@@ -2,9 +2,10 @@
 
 import { useEffect, useState, createContext, useContext } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabaseclient';
-import type { Profile } from '@/lib/types';
-import { useAuthStore } from '@/lib/auth-store';
+import { supabase } from '@/lib/client/supabaseclient';
+import type { Profile } from '@/lib/shared/types';
+import { useAuthStore } from '@/lib/client/auth-store';
+import { publicEnv } from '@/lib/env/public';
 
 type AuthContextValue = {
   user: User | null;
@@ -22,6 +23,65 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const setStoreUser = useAuthStore((s) => s.setUser);
   const setStoreLoading = useAuthStore((s) => s.setLoading);
+  const disableSessionSync = typeof navigator !== 'undefined' && navigator.webdriver;
+
+  const syncSessionCookies = (session: { access_token?: string; refresh_token?: string; expires_at?: number } | null) => {
+    if (typeof document === 'undefined') return;
+    const maxAge =
+      session?.expires_at && Number.isFinite(session.expires_at) ? Math.max(0, session.expires_at - Math.floor(Date.now() / 1000)) : 0;
+    const expires = maxAge > 0 ? `; Max-Age=${maxAge}` : '; Max-Age=0';
+    const projectRef = (() => {
+      try {
+        return new URL(publicEnv.NEXT_PUBLIC_SUPABASE_URL).host.split('.')[0];
+      } catch {
+        return '';
+      }
+    })();
+
+    const setCookie = (name: string, value?: string) => {
+      if (!value) {
+        document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
+        return;
+      }
+      document.cookie = `${name}=${value}; Path=/; SameSite=Lax${expires}`;
+    };
+
+    const authTokenPayload =
+      session && session.access_token
+        ? encodeURIComponent(
+            JSON.stringify({
+              currentSession: session,
+              expiresAt: session.expires_at ?? null,
+            })
+          )
+        : null;
+
+    setCookie('sb-access-token', session?.access_token);
+    setCookie('sb-refresh-token', session?.refresh_token);
+    if (projectRef) {
+      setCookie(`sb-${projectRef}-access-token`, session?.access_token);
+      setCookie(`sb-${projectRef}-refresh-token`, session?.refresh_token);
+      setCookie(`sb-${projectRef}-auth-token`, authTokenPayload ?? undefined);
+    }
+  };
+
+  const syncSessionToServer = async (session: { access_token?: string; refresh_token?: string } | null) => {
+    if (disableSessionSync) return;
+    if (!session?.access_token || !session?.refresh_token) return;
+    try {
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        }),
+        credentials: 'include',
+      });
+    } catch {
+      // best-effort; ignore
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -66,6 +126,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setStoreLoading(true);
 
       const { data } = await supabase.auth.getSession();
+      syncSessionCookies(data.session ?? null);
+      void syncSessionToServer(data.session ?? null);
       await hydrate(data.session?.user ?? null);
 
       if (!isMounted) return;
@@ -75,7 +137,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      syncSessionCookies(session ?? null);
+      void syncSessionToServer(session ?? null);
       setIsLoading(true);
       setStoreLoading(true);
       void hydrate(session?.user ?? null).finally(() => {
@@ -92,15 +156,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [setStoreLoading, setStoreUser]);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    if (!error) {
+      syncSessionCookies(data.session ?? null);
+      void syncSessionToServer(data.session ?? null);
+    }
     return { error };
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    syncSessionCookies(null);
+    if (!disableSessionSync) {
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token: null, refresh_token: null }),
+        credentials: 'include',
+      }).catch(() => {});
+    }
   };
 
   return (
@@ -117,3 +194,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

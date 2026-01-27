@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { supabase } from '@/lib/supabaseclient';
-import { registerSchema } from '@/lib/validators';
+import { supabase } from '@/lib/client/supabaseclient';
+import { registerSchema } from '@/lib/shared/validators';
 
 export default function DashboardRegisterPage() {
 	const router = useRouter();
@@ -104,3 +104,4 @@ export default function DashboardRegisterPage() {
 		</div>
 	);
 }
+

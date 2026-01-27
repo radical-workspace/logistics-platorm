@@ -1,11 +1,11 @@
+import 'server-only';
+
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+import { publicEnv } from '@/lib/env/public';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
+const supabaseUrl = publicEnv.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export function createSupabasePublicServerClient() {
   return createClient(supabaseUrl, supabaseAnonKey, {

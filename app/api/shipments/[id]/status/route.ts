@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseRouteClient } from '@/lib/supabase-route';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { sendShipmentUpdateEmail } from '@/lib/email';
+import { supabaseAdmin } from '@/lib/server/supabase-admin';
+import { sendShipmentUpdateEmail } from '@/lib/server/email';
+import { publicEnv } from '@/lib/env/public';
+import { createSupabaseRouteClient } from '@/lib/server/supabase-route';
 
 const allowedStatuses = new Set(['pending', 'picked_up', 'in_transit', 'delivered', 'cancelled']);
 
@@ -19,79 +20,88 @@ type CompanyNameRow = { name: string | null };
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const body = (await request.json().catch(() => null)) as { status?: string } | null;
-  const status = (body?.status || '').trim();
+  const body = (await request.json().catch(() => null)) as { status?: unknown } | null;
+  const status = String(body?.status ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
 
   if (!allowedStatuses.has(status)) {
-    return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    return NextResponse.json({ ok: false, error: 'Invalid status' }, { status: 400 });
   }
 
-  const { supabase, response } = createSupabaseRouteClient(request);
-
+  const { supabase } = createSupabaseRouteClient(request);
   const {
     data: { user },
+    error: userErr,
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (userErr || !user?.id) {
+    return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data: me } = await supabase.from('profiles').select('id,role').eq('id', user.id).single();
-  const role = (me as { role?: string } | null)?.role;
+  const effectiveUserId = user.id;
 
-  if (role !== 'admin' && role !== 'dispatcher') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const { data: me, error: meErr } = await supabaseAdmin
+    .from('profiles')
+    .select('id,role')
+    .eq('id', effectiveUserId)
+    .maybeSingle();
+
+  if (meErr) {
+    return NextResponse.json({ ok: false, error: meErr.message }, { status: 500 });
   }
 
-  // RLS-gated read proves access.
-  const { data: shipment, error: shipmentErr } = await supabase
+  const role = (me as { role?: string } | null)?.role ?? null;
+  if (role !== 'admin') {
+    return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 });
+  }
+
+  const { data: shipment, error: shipmentErr } = await supabaseAdmin
     .from('shipments')
     .select('id,reference_number,status,company_id,customer_id')
     .eq('id', id)
     .single();
 
   if (shipmentErr || !shipment) {
-    return NextResponse.json({ error: 'Shipment not found' }, { status: 404 });
+    return NextResponse.json({ ok: false, error: shipmentErr?.message || 'Shipment not found' }, { status: 404 });
   }
 
-  const { data: updated, error: updateErr } = await supabase
+  const { data: updated, error: updateErr } = await supabaseAdmin
     .from('shipments')
     .update({ status })
     .eq('id', id)
     .select('*')
     .single();
 
-  if (updateErr) {
-    return NextResponse.json({ error: updateErr.message }, { status: 400 });
+  if (updateErr || !updated) {
+    return NextResponse.json({ ok: false, error: updateErr?.message || 'Update failed' }, { status: 500 });
   }
 
-  // Insert an event (created_by enforced in DB trigger).
-  await supabase.from('shipment_events').insert({
-    shipment_id: id,
-    event_type: 'status_change',
-    notes: `Status set to ${status}`,
-  });
+  if (effectiveUserId) {
+    try {
+      await supabaseAdmin.from('shipment_events').insert({
+        shipment_id: id,
+        event_type: 'status_change',
+        notes: `Status set to ${status}`,
+        created_by: effectiveUserId,
+      });
+    } catch {
+      // ignore
+    }
+  }
 
-  // Email the customer (use admin for lookups; access already verified by RLS).
   const shipmentRow = shipment as ShipmentLookupRow;
   const [{ data: customerProfile }, { data: company }] = await Promise.all([
-    supabaseAdmin
-      .from('profiles')
-      .select('email')
-      .eq('id', shipmentRow.customer_id)
-      .single(),
-    supabaseAdmin
-      .from('companies')
-      .select('name')
-      .eq('id', shipmentRow.company_id)
-      .single(),
+    supabaseAdmin.from('profiles').select('email').eq('id', shipmentRow.customer_id).single(),
+    supabaseAdmin.from('companies').select('name').eq('id', shipmentRow.company_id).single(),
   ]);
 
   const to = (customerProfile as ProfileEmailRow | null)?.email ?? undefined;
   const companyName = (company as CompanyNameRow | null)?.name || 'AFGHCO';
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
-  const trackingUrl = `${appUrl}/?ref=${encodeURIComponent(shipmentRow.reference_number)}#tracking`;
+  const appUrl = publicEnv.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+  const trackingUrl = `${appUrl}/tracking?ref=${encodeURIComponent(shipmentRow.reference_number)}`;
 
   if (to) {
     await sendShipmentUpdateEmail({
@@ -102,8 +112,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       updateTitle: 'Shipment status updated',
       updateBody: null,
       trackingUrl,
-    });
+    }).catch((err) => console.warn('sendShipmentUpdateEmail failed', err));
   }
 
-  return NextResponse.json({ shipment: updated }, { headers: response.headers });
+  return NextResponse.json({ ok: true, shipment: updated });
 }
+

@@ -41,6 +41,9 @@ export default defineConfig({
   },
   use: {
     baseURL: 'http://localhost:3000',
+    extraHTTPHeaders: {
+      Authorization: `Bearer ${process.env.E2E_ACCESS_TOKEN}`,
+    },
     headless: true,
     viewport: { width: 1280, height: 800 },
     navigationTimeout: 60 * 1000,

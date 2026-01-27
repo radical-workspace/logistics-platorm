@@ -10,6 +10,14 @@ Enterprise logistics platform built with Next.js App Router, Tailwind CSS v4, an
 - Maps: MapLibre with public basemap; simulated preview fallback on failure
 - Deployment: Vercel-ready; works behind Cloudflare/AWS CDNs
 
+## Frontend vs Backend
+- Frontend UI: `app/**` pages/components (except `app/api/**`), `app/components/**`, `public/**`
+- Backend API routes: `app/api/**` (server-only code)
+- Backend data layer: `lib/server/**` (Supabase admin, route clients, email)
+- Frontend helpers: `lib/client/**` (api fetch, auth store, public Supabase client)
+- Shared types/validation: `lib/shared/**` (types, zod schemas)
+- DB layer: `supabase/**` (migrations, policies, SQL snippets)
+
 ## Features
 - Public marketing + CTA pages (home, solutions, platform, company, contact)
 - Tracking page with live map preview and fallback
@@ -18,11 +26,13 @@ Enterprise logistics platform built with Next.js App Router, Tailwind CSS v4, an
 - Shipments detail: realtime updates, assignment, and status updates
 
 ## Environment Variables
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (server only)
+- `NEXT_PUBLIC_SUPABASE_URL` (required)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (required)
+- `SUPABASE_SERVICE_ROLE_KEY` (server only, required for admin routes)
 - `SUPABASE_JWT_SECRET` (server only)
 - `NEXT_PUBLIC_APP_URL` (e.g. `http://localhost:3000`)
+- Optional observability: `NEXT_PUBLIC_SENTRY_DSN` (client), `SENTRY_DSN` (server)
+- Optional Sentry uploads: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`
 - Optional email: `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `AFGHCO <onboarding@resend.dev>`)
 - Optional map style: `NEXT_PUBLIC_MAP_STYLE_URL`
 
@@ -50,6 +60,17 @@ Enterprise logistics platform built with Next.js App Router, Tailwind CSS v4, an
 - Deploy to Vercel; set env vars in project settings
 - Compatible with Cloudflare/AWS CDNs
 - Add monitoring (Sentry/LogRocket) as needed
+ - Health check: `GET /api/health` returns `{ ok: true }`
+
+## Observability
+- Structured server logs emit JSON from API routes (request IDs via `x-request-id`).
+- Optional error tracking (Sentry):
+  1) Install: `npm install @sentry/nextjs`
+  2) Run: `npx @sentry/wizard -i nextjs`
+  3) Set `SENTRY_DSN` in your environment
+
+## CI
+- GitHub Actions workflow runs `lint`, `test`, and `build` on push/PR.
 
 ## Data Model (core tables)
 - `profiles`/`users`: role (admin/customer), identity

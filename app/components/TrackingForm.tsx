@@ -1,21 +1,24 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export default function TrackingForm() {
-  const router = useRouter();
   const [reference, setReference] = useState('');
 
   return (
     <form
       action="/tracking"
+      method="get"
       className="mt-8 flex gap-2 max-w-md"
       onSubmit={(e) => {
-        e.preventDefault();
         const trimmed = reference.trim();
-        if (!trimmed) return;
-        router.push(`/tracking?ref=${encodeURIComponent(trimmed)}`);
+        if (!trimmed) {
+          e.preventDefault();
+          return;
+        }
+
+        const input = e.currentTarget.querySelector('input[name="ref"]') as HTMLInputElement | null;
+        if (input) input.value = trimmed;
       }}
     >
       <input

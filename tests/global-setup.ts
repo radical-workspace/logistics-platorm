@@ -1,11 +1,11 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { createClient } from '@supabase/supabase-js';
+import fs from "node:fs";
+import path from "node:path";
+import { createClient } from "@supabase/supabase-js";
 
 type ProfileRow = {
   id: string;
   email: string;
-  role: 'admin' | 'dispatcher' | 'driver' | 'customer';
+  role: "admin" | "dispatcher" | "driver" | "customer";
   company_id: string | null;
 };
 
@@ -13,8 +13,40 @@ type ProfileRow = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseAdminClient = any;
 
+type SeedOut = {
+  adminEmail: string;
+  adminPassword: string;
+  adminId: string;
+  customerId: string;
+  companyId: string;
+  shipmentId: string;
+  shipmentRef: string;
+};
+
+const SEED_DIR = ".playwright";
+const SEED_FILE = "e2e-seed.json";
+
+function seedPath() {
+  return path.join(process.cwd(), SEED_DIR, SEED_FILE);
+}
+
+function readSeed(): SeedOut | null {
+  const p = seedPath();
+  if (!fs.existsSync(p)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(p, "utf8")) as SeedOut;
+  } catch {
+    return null;
+  }
+}
+
+function writeSeed(seed: SeedOut) {
+  const outDir = path.join(process.cwd(), SEED_DIR);
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.writeFileSync(seedPath(), JSON.stringify(seed, null, 2), "utf8");
+}
+
 async function findUserIdByEmail(supabaseAdmin: SupabaseAdminClient, email: string) {
-  // admin.listUsers is paginated; search until found.
   let page = 1;
   const perPage = 200;
 
@@ -22,7 +54,10 @@ async function findUserIdByEmail(supabaseAdmin: SupabaseAdminClient, email: stri
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
     if (error) throw error;
 
-    const match = data.users.find((u: { id?: string; email?: string | null }) => u.email?.toLowerCase() === email.toLowerCase());
+    const match = data.users.find(
+      (u: { id?: string; email?: string | null }) =>
+        u.email?.toLowerCase() === email.toLowerCase()
+    );
     if (match?.id) return match.id;
 
     if (data.users.length < perPage) return null;
@@ -45,7 +80,7 @@ async function getOrCreateUser(
   });
 
   if (error) throw error;
-  if (!data.user?.id) throw new Error('Failed to create user');
+  if (!data.user?.id) throw new Error("Failed to create user");
   return data.user.id;
 }
 
@@ -56,9 +91,9 @@ async function waitForProfile(
 ): Promise<ProfileRow> {
   for (let i = 0; i < attempts; i += 1) {
     const { data, error } = await supabaseAdmin
-      .from('profiles')
-      .select('id,email,role,company_id')
-      .eq('id', userId)
+      .from("profiles")
+      .select("id,email,role,company_id")
+      .eq("id", userId)
       .maybeSingle();
 
     if (error) throw error;
@@ -67,53 +102,57 @@ async function waitForProfile(
     await new Promise((r) => setTimeout(r, 300));
   }
 
-  throw new Error('Profile row not created by trigger in time');
+  throw new Error("Profile row not created by trigger in time");
+}
+
+function makeShipmentRef() {
+  const base = `E2E-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
+  return `${base}-${Math.floor(Math.random() * 100000)}`;
 }
 
 export default async function globalSetup() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  // If you don't have a service role key locally, we can still run the public/guard tests.
   if (!supabaseUrl || !serviceRoleKey) {
     console.warn(
-      'Playwright globalSetup: missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY; admin E2E tests will be skipped.'
+      "Playwright globalSetup: missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY; admin E2E tests will be skipped."
     );
     return;
   }
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-  const adminEmail = process.env.E2E_ADMIN_EMAIL || 'e2e-admin@afghco.test';
-  const adminPassword = process.env.E2E_ADMIN_PASSWORD || 'AdminPassword123!';
-  const customerEmail = process.env.E2E_CUSTOMER_EMAIL || 'e2e-customer@afghco.test';
-  const customerPassword = process.env.E2E_CUSTOMER_PASSWORD || 'CustomerPassword123!';
+  const adminEmail = process.env.E2E_ADMIN_EMAIL || "e2e-admin@afghco.test";
+  const adminPassword = process.env.E2E_ADMIN_PASSWORD || "AdminPassword123!";
+  const customerEmail = process.env.E2E_CUSTOMER_EMAIL || "e2e-customer@afghco.test";
+  const customerPassword = process.env.E2E_CUSTOMER_PASSWORD || "CustomerPassword123!";
 
   const adminId = await getOrCreateUser(supabaseAdmin, {
     email: adminEmail,
     password: adminPassword,
-    displayName: 'E2E Admin',
+    displayName: "E2E Admin",
   });
   const customerId = await getOrCreateUser(supabaseAdmin, {
     email: customerEmail,
     password: customerPassword,
-    displayName: 'E2E Customer',
+    displayName: "E2E Customer",
   });
 
   await waitForProfile(supabaseAdmin, adminId);
   await waitForProfile(supabaseAdmin, customerId);
 
   // Ensure roles
-  await supabaseAdmin.from('profiles').update({ role: 'admin' }).eq('id', adminId);
-  await supabaseAdmin.from('profiles').update({ role: 'customer' }).eq('id', customerId);
+  await supabaseAdmin.from("profiles").update({ role: "admin" }).eq("id", adminId);
+  await supabaseAdmin.from("profiles").update({ role: "customer" }).eq("id", customerId);
 
   // Ensure a company owned by admin
-  const companyName = process.env.E2E_COMPANY_NAME || 'E2E Logistics';
+  const companyName = process.env.E2E_COMPANY_NAME || "E2E Logistics";
   const { data: existingCompany, error: companyFetchError } = await supabaseAdmin
-    .from('companies')
-    .select('id')
-    .eq('owner_id', adminId)
-    .eq('name', companyName)
+    .from("companies")
+    .select("id")
+    .eq("owner_id", adminId)
+    .eq("name", companyName)
     .maybeSingle();
 
   if (companyFetchError) throw companyFetchError;
@@ -123,14 +162,14 @@ export default async function globalSetup() {
     companyId = existingCompany.id as string;
   } else {
     const { data: companyInsert, error: companyInsertError } = await supabaseAdmin
-      .from('companies')
+      .from("companies")
       .insert({
         name: companyName,
-        slug: 'e2e-logistics',
+        slug: "e2e-logistics",
         owner_id: adminId,
-        description: 'Seed data for Playwright E2E',
+        description: "Seed data for Playwright E2E",
       })
-      .select('id')
+      .select("id")
       .single();
 
     if (companyInsertError) throw companyInsertError;
@@ -138,55 +177,88 @@ export default async function globalSetup() {
   }
 
   // Link both profiles to the company
-  await supabaseAdmin.from('profiles').update({ company_id: companyId }).in('id', [adminId, customerId]);
+  await supabaseAdmin.from("profiles").update({ company_id: companyId }).in("id", [adminId, customerId]);
 
-  // Ensure one shipment for tracking/status tests
-  const referenceBase = `E2E-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
-  const shipmentRef = `${referenceBase}-${Math.floor(Math.random() * 100000)}`;
+  // ----------------------------
+  // Shipment seeding (reusable)
+  // ----------------------------
+  const prev = readSeed();
 
-  const { data: shipmentInsert, error: shipmentInsertError } = await supabaseAdmin
-    .from('shipments')
-    .insert({
-      company_id: companyId,
-      customer_id: customerId,
-      reference_number: shipmentRef,
-      origin_address: 'Kabul',
-      destination_address: 'Lagos',
-      status: 'pending',
-      description: 'Seed shipment for Playwright E2E',
-    })
-    .select('id')
-    .single();
+  let shipmentId: string | null = prev?.shipmentId ?? null;
+  let shipmentRef: string | null = prev?.shipmentRef ?? null;
 
-  if (shipmentInsertError) throw shipmentInsertError;
-  const shipmentId = shipmentInsert.id as string;
+  if (shipmentId) {
+    const { data: existingShipment } = await supabaseAdmin
+      .from("shipments")
+      .select("id,reference_number,status")
+      .eq("id", shipmentId)
+      .maybeSingle();
 
-  // Add an event so tracking page has a "Last update" entry
-  await supabaseAdmin.from('shipment_events').insert({
-    shipment_id: shipmentId,
-    event_type: 'status_update',
-    notes: 'Seed event for Playwright E2E',
-    created_by: adminId,
-  });
+    const existingStatus = String(existingShipment?.status ?? "").toLowerCase();
 
-  const outDir = path.join(process.cwd(), '.playwright');
-  fs.mkdirSync(outDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(outDir, 'e2e-seed.json'),
-    JSON.stringify(
-      {
-        adminEmail,
-        adminPassword,
-        adminId,
-        customerId,
-        companyId,
-        shipmentId,
-        shipmentRef,
-      },
-      null,
-      2
-    )
-  );
+    // If previous shipment missing OR already delivered, force a new one
+    if (!existingShipment || existingStatus === "delivered") {
+      shipmentId = null;
+      shipmentRef = null;
+    } else {
+      // Keep ref aligned with DB
+      shipmentRef = existingShipment.reference_number as string;
+    }
+  }
+
+  // Create a fresh shipment if needed
+  if (!shipmentId || !shipmentRef) {
+    const newRef = makeShipmentRef();
+
+    const { data: shipmentInsert, error: shipmentInsertError } = await supabaseAdmin
+      .from("shipments")
+      .insert({
+        company_id: companyId,
+        customer_id: customerId,
+        reference_number: newRef,
+        origin_address: "Kabul",
+        destination_address: "Lagos",
+        status: "in_transit", // IMPORTANT: allows delivery confirmation
+        description: "Seed shipment for Playwright E2E",
+      })
+      .select("id,reference_number")
+      .single();
+
+    if (shipmentInsertError) throw shipmentInsertError;
+
+    shipmentId = shipmentInsert.id as string;
+    shipmentRef = shipmentInsert.reference_number as string;
+
+    // Seed an event so tracking page has a "Last update" entry
+    await supabaseAdmin.from("shipment_events").insert({
+      shipment_id: shipmentId,
+      event_type: "status_update",
+      notes: "Seed event for Playwright E2E",
+      created_by: adminId,
+    });
+  } else {
+    // Ensure it starts in a confirmable state for tests
+    await supabaseAdmin
+      .from("shipments")
+      .update({ status: "in_transit" })
+      .eq("id", shipmentId);
+  }
+
+  // Clean old approvals for this shipment (prevents conflicts between runs)
+  await supabaseAdmin.from("approval_requests").delete().eq("shipment_id", shipmentId);
+
+  // Write seed file every run (authoritative)
+  const seedOut: SeedOut = {
+    adminEmail,
+    adminPassword,
+    adminId,
+    customerId,
+    companyId,
+    shipmentId,
+    shipmentRef,
+  };
+
+  writeSeed(seedOut);
 
   // Populate env vars expected by tests/helpers/e2e-seed.ts
   process.env.E2E_ADMIN_EMAIL = adminEmail;

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import TrackingMap from '@/app/components/TrackingMap';
-import { apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/client/api';
 
 type TrackShipmentRow = {
   shipment_id: string;
@@ -112,3 +112,4 @@ export default function HomeTrackingPreview() {
     </div>
   );
 }
+

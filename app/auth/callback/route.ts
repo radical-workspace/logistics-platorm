@@ -3,6 +3,8 @@ import { createServerClient } from '@supabase/ssr';
 import type { CookieOptions, SetAllCookies } from '@supabase/ssr';
 import type { NextRequest } from 'next/server';
 
+import { getPublicEnv } from '@/lib/env/public';
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
@@ -24,14 +26,12 @@ export async function GET(request: NextRequest) {
 
   let response = NextResponse.redirect(new URL(redirectTo, request.url));
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-  if (!supabaseUrl || !supabaseAnonKey) {
+  const env = getPublicEnv();
+  if (!env) {
     return response;
   }
 
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+  const supabase = createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
     cookies: {
       getAll() {
         return request.cookies.getAll();

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabaseclient';
+import { supabase } from '@/lib/client/supabaseclient';
 import { useAuth } from '@/app/auth/AuthProvider';
-import type { Vehicle } from '@/lib/types';
+import type { Vehicle } from '@/lib/shared/types';
 
 export default function VehiclesPage() {
   const { profile } = useAuth();
@@ -76,3 +76,4 @@ export default function VehiclesPage() {
     </main>
   );
 }
+

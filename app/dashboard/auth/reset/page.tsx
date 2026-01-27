@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { supabase } from '@/lib/supabaseclient';
-import { passwordResetSchema } from '@/lib/validators';
+import { supabase } from '@/lib/client/supabaseclient';
+import { passwordResetSchema } from '@/lib/shared/validators';
 
 export default function DashboardResetPasswordPage() {
 	const [loading, setLoading] = useState(false);
@@ -67,3 +67,4 @@ export default function DashboardResetPasswordPage() {
 		</div>
 	);
 }
+
