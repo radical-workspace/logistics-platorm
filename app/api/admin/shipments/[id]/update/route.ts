@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/server/supabase-route';
 import { supabaseAdmin } from '@/lib/server/supabase-admin';
@@ -9,25 +10,23 @@ type AdminShipmentUpdateBody = {
   current_location_label?: unknown;
   current_lat?: unknown;
   current_lng?: unknown;
+  lat?: unknown;
+  lng?: unknown;
   assigned_dispatcher_id?: unknown;
   notes?: unknown;
 };
-
-function parseOptionalNumber(value: unknown) {
-  if (value === null || value === undefined || value === '') return null;
-  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-  const parsed = Number(String(value));
-  return Number.isFinite(parsed) ? parsed : null;
-}
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const body = (await request.json().catch(() => null)) as AdminShipmentUpdateBody | null;
+  const body = (await request.json().catch(() => ({}))) as AdminShipmentUpdateBody;
 
-  const rawStatus = String(body?.status ?? '')
+  if (body.lat == null && body.current_lat != null) body.lat = body.current_lat;
+  if (body.lng == null && body.current_lng != null) body.lng = body.current_lng;
+
+  const rawStatus = String(body.status ?? '')
     .trim()
     .toLowerCase()
     .replace(/\s+/g, '_');
@@ -37,25 +36,35 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ ok: false, error: 'Invalid status' }, { status: 400 });
   }
 
-  const locationLabel = String(body?.current_location_label ?? '').trim().slice(0, 140) || null;
-  const lat = parseOptionalNumber(body?.current_lat);
-  const lng = parseOptionalNumber(body?.current_lng);
-  const assignedDispatcherRaw = String(body?.assigned_dispatcher_id ?? '').trim();
+  const locationLabel = String(body.current_location_label ?? '').trim().slice(0, 140) || null;
+  const latitude =
+    body.lat === "" || body.lat == null ? null : Number(body.lat);
+  const longitude =
+    body.lng === "" || body.lng == null ? null : Number(body.lng);
+
+  if (latitude !== null && Number.isNaN(latitude)) {
+    return Response.json({ error: "Invalid latitude" }, { status: 400 });
+  }
+  if (longitude !== null && Number.isNaN(longitude)) {
+    return Response.json({ error: "Invalid longitude" }, { status: 400 });
+  }
+
+  const assignedDispatcherRaw = String(body.assigned_dispatcher_id ?? '').trim();
   const assigned_dispatcher_id = assignedDispatcherRaw ? assignedDispatcherRaw : null;
-  const notes = String(body?.notes ?? '').trim().slice(0, 500) || null;
+  const notes = String(body.notes ?? '').trim().slice(0, 500) || null;
 
   if (assigned_dispatcher_id && !/^[0-9a-fA-F-]{36}$/.test(assigned_dispatcher_id)) {
     return NextResponse.json({ ok: false, error: 'Invalid assigned_dispatcher_id' }, { status: 400 });
   }
 
-  if (lat !== null && lng === null) {
-    return NextResponse.json({ ok: false, error: 'current_lng is required when current_lat is provided' }, { status: 400 });
+  if (latitude !== null && longitude === null) {
+    return NextResponse.json({ ok: false, error: 'lng is required when lat is provided' }, { status: 400 });
   }
-  if (lng !== null && lat === null) {
-    return NextResponse.json({ ok: false, error: 'current_lat is required when current_lng is provided' }, { status: 400 });
+  if (longitude !== null && latitude === null) {
+    return NextResponse.json({ ok: false, error: 'lat is required when lng is provided' }, { status: 400 });
   }
 
-  if (!status && !locationLabel && lat === null && lng === null && !assigned_dispatcher_id && !notes) {
+  if (!status && !locationLabel && latitude === null && longitude === null && !assigned_dispatcher_id && !notes) {
     return NextResponse.json({ ok: false, error: 'Missing update fields' }, { status: 400 });
   }
 
@@ -103,16 +112,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       ? assigned_dispatcher_id
       : null;
 
-  if (!statusToApply && !locationLabel && lat === null && lng === null && !dispatcherToApply && !notes) {
+  if (!statusToApply && !locationLabel && latitude === null && longitude === null && !dispatcherToApply && !notes) {
     return NextResponse.json({ ok: false, error: 'No changes provided' }, { status: 400, headers: response.headers });
   }
 
   const shipmentUpdate: Record<string, unknown> = {};
   if (statusToApply) shipmentUpdate.status = statusToApply;
   if (locationLabel) shipmentUpdate.current_location_label = locationLabel;
-  if (lat !== null && lng !== null) {
-    shipmentUpdate.current_lat = lat;
-    shipmentUpdate.current_lng = lng;
+  if (latitude !== null && longitude !== null) {
+    shipmentUpdate.current_lat = latitude;
+    shipmentUpdate.current_lng = longitude;
     shipmentUpdate.last_event_at = new Date().toISOString();
   }
   if (dispatcherToApply !== null) shipmentUpdate.assigned_dispatcher_id = dispatcherToApply;
@@ -145,8 +154,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .insert({
       shipment_id: id,
       event_type,
-      latitude: lat,
-      longitude: lng,
+      latitude,
+      longitude,
       notes:
         combinedNotes ??
         (dispatcherToApply !== null ? `Assigned dispatcher=${dispatcherToApply || 'none'}` : null),
