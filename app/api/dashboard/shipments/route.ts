@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   const status = allowedStatuses.has(statusParam) ? statusParam : null;
 
-  const { supabase, response } = createSupabaseRouteClient(request);
+  const { supabase, response } = await createSupabaseRouteClient(request);
 
   const {
     data: { user },
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
       }
     | null;
 
-  const { supabase, response } = createSupabaseRouteClient(request);
+  const { supabase, response } = await createSupabaseRouteClient(request);
   const {
     data: { user },
   } = await supabase.auth.getUser();

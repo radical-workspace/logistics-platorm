@@ -59,7 +59,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ ok: false, error: 'Missing update fields' }, { status: 400 });
   }
 
-  const { supabase, response } = createSupabaseRouteClient(request);
+  const { supabase, response } = await createSupabaseRouteClient(request);
   const {
     data: { user },
     error: userErr,

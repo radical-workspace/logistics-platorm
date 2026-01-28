@@ -28,7 +28,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const assigned_driver_id = driver ? driver : null;
   const assigned_vehicle_id = vehicle ? vehicle : null;
 
-  const { supabase, response } = createSupabaseRouteClient(request);
+  const { supabase, response } = await createSupabaseRouteClient(request);
 
   const {
     data: { user },

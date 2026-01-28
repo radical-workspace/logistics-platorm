@@ -11,7 +11,7 @@ export async function PATCH(
   const { id } = await params;
 
   // Auth (must be logged in)
-  const { supabase } = createSupabaseRouteClient(request);
+  const { supabase } = await createSupabaseRouteClient(request);
   const {
     data: { user },
     error: userErr,

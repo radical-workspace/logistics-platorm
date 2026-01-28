@@ -9,7 +9,7 @@ export async function POST(
 ) {
   const { id } = await params;
 
-  const { supabase } = createSupabaseRouteClient(request);
+  const { supabase } = await createSupabaseRouteClient(request);
   const {
     data: { user },
     error: userErr,

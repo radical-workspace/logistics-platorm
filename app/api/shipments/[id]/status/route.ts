@@ -30,7 +30,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ ok: false, error: 'Invalid status' }, { status: 400 });
   }
 
-  const { supabase } = createSupabaseRouteClient(request);
+  const { supabase } = await createSupabaseRouteClient(request);
   const {
     data: { user },
     error: userErr,

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ exp
   try {
     const { export: exportName } = await context.params;
 
-    const { supabase, response } = createSupabaseRouteClient(request);
+    const { supabase, response } = await createSupabaseRouteClient(request);
 
     const {
       data: { user },

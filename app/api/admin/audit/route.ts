@@ -13,7 +13,7 @@ type AuditRow = {
 
 export async function GET(request: NextRequest) {
   try {
-    const { supabase, response } = createSupabaseRouteClient(request);
+    const { supabase, response } = await createSupabaseRouteClient(request);
 
     const {
       data: { user },

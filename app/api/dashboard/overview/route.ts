@@ -37,7 +37,7 @@ type ShipmentRefRow = { id: string; reference_number: string };
 
 export async function GET(request: NextRequest) {
   const requestId = request.headers.get('x-request-id');
-  const { supabase, response } = createSupabaseRouteClient(request);
+  const { supabase, response } = await createSupabaseRouteClient(request);
 
   const {
     data: { user },

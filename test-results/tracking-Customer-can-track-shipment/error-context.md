@@ -1,0 +1,88 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - img "AFGHCO Logo" [ref=e5]
+        - generic [ref=e6]:
+          - generic [ref=e7]: AFGHCO
+          - generic [ref=e8]: LOGISTICS CONTROL
+      - navigation [ref=e9]:
+        - link "Home" [ref=e10] [cursor=pointer]:
+          - /url: /
+        - link "Solutions" [ref=e11] [cursor=pointer]:
+          - /url: /solutions
+        - link "Platform" [ref=e12] [cursor=pointer]:
+          - /url: /platform
+        - link "Company" [ref=e13] [cursor=pointer]:
+          - /url: /company
+        - link "Contact" [ref=e14] [cursor=pointer]:
+          - /url: /contact
+        - link "Tracking" [ref=e15] [cursor=pointer]:
+          - /url: /tracking
+      - generic [ref=e16]:
+        - link "Book a call" [ref=e17] [cursor=pointer]:
+          - /url: /contact
+        - link "Client login" [ref=e18] [cursor=pointer]:
+          - /url: /dashboard/auth/login
+  - main [ref=e19]:
+    - generic [ref=e20]:
+      - heading "Shipment Tracking" [level=1] [ref=e21]
+      - paragraph [ref=e22]: Enter a shipment reference from the home page to view status.
+      - generic [ref=e23]:
+        - paragraph [ref=e24]: Tracking lookup failed.
+        - paragraph [ref=e25]: "TypeError: fetch failed"
+        - link "Try another" [ref=e26] [cursor=pointer]:
+          - /url: /
+  - contentinfo [ref=e27]:
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - generic [ref=e31]: AFGHCO
+          - generic [ref=e32]: LOGISTICS
+          - paragraph [ref=e33]: Afghanistan’s sovereign logistics partner delivering global freight orchestration, bonded warehousing, and real-time situational awareness for government, NGO, and commercial programmes.
+          - paragraph [ref=e34]: Network Operations Centre
+          - paragraph [ref=e35]: Kabul International Airport, Air Cargo Village
+          - paragraph [ref=e36]: ops@afghco.com · +93 (0)20 210 1111
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - paragraph [ref=e39]: Company
+            - link "Home" [ref=e40] [cursor=pointer]:
+              - /url: /
+            - link "About" [ref=e41] [cursor=pointer]:
+              - /url: /company
+            - link "Contact" [ref=e42] [cursor=pointer]:
+              - /url: /contact
+            - link "Platform" [ref=e43] [cursor=pointer]:
+              - /url: /platform
+            - link "Client login" [ref=e44] [cursor=pointer]:
+              - /url: /dashboard/auth/login
+          - generic [ref=e45]:
+            - paragraph [ref=e46]: Solutions
+            - link "Supply chain control" [ref=e47] [cursor=pointer]:
+              - /url: /solutions#supply-chain
+            - link "Air, sea, land freight" [ref=e48] [cursor=pointer]:
+              - /url: /solutions#freight
+            - link "Secure warehousing" [ref=e49] [cursor=pointer]:
+              - /url: /solutions#warehousing
+            - link "Track a shipment" [ref=e50] [cursor=pointer]:
+              - /url: /tracking
+          - generic [ref=e51]:
+            - paragraph [ref=e52]: Compliance
+            - paragraph [ref=e53]: ISO 9001
+            - paragraph [ref=e54]: ICAO Annex 17
+            - paragraph [ref=e55]: "UNGM vendor #457890"
+          - generic [ref=e56]:
+            - paragraph [ref=e57]: Rapid response
+            - paragraph [ref=e58]: Emergency desk
+            - paragraph [ref=e59]: crisis@afghco.com
+            - paragraph [ref=e60]: +93 (0)20 210 1199
+      - generic [ref=e61]:
+        - generic [ref=e62]: © 2026 AFGHCO. All rights reserved.
+        - generic [ref=e63]: Built with Next.js + Supabase
+  - button "Open Next.js Dev Tools" [ref=e69] [cursor=pointer]:
+    - img [ref=e70]
+  - alert [ref=e73]
+```

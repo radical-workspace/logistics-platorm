@@ -7,10 +7,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { publicEnv } from '@/lib/env/public';
 
-export function createSupabaseRouteClient(request?: NextRequest) {
+export async function createSupabaseRouteClient(request?: NextRequest) {
   let response = new NextResponse(null);
-  const cookieStore = cookies();
-  const headerStore = headers();
+  const cookieStore = await cookies();
+  const headerStore = await headers();
 
   const supabaseUrl = publicEnv.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY;

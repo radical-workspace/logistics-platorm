@@ -26,7 +26,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'event_type is required' }, { status: 400 });
   }
 
-  const { supabase, response } = createSupabaseRouteClient(request);
+  const { supabase, response } = await createSupabaseRouteClient(request);
 
   const {
     data: { user },

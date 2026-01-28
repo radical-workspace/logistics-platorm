@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/server/supabase-admin';
 
 export async function POST(request: NextRequest) {
   try {
-    const { supabase, response } = createSupabaseRouteClient(request);
+    const { supabase, response } = await createSupabaseRouteClient(request);
     const {
       data: { user },
     } = await supabase.auth.getUser();

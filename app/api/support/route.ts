@@ -13,7 +13,7 @@ const TicketSchema = z.object({
 export async function POST(request: NextRequest) {
   const requestId = request.headers.get('x-request-id');
   try {
-    const { supabase, response } = createSupabaseRouteClient(request);
+    const { supabase, response } = await createSupabaseRouteClient(request);
     const { data: userData } = await supabase.auth.getUser();
     const user = userData.user;
 
