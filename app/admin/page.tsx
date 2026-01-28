@@ -190,10 +190,32 @@ export default function AdminPage() {
           <p className="text-slate-400 max-w-3xl">
             Govern users, shipments, and fleet. Use the shortcuts below to jump into operational consoles or export a current view.
           </p>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/admin/shipments" className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 font-semibold text-white">Shipments</Link>
-            <Link href="/dashboard/vehicles" className="px-4 py-2 rounded-full border border-slate-700 hover:border-slate-500 font-semibold text-slate-100">Vehicles</Link>
-            <Link href="/dashboard/tracking" className="px-4 py-2 rounded-full border border-slate-700 hover:border-slate-500 font-semibold text-slate-100">Tracking</Link>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href="/admin/shipments"
+              className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              Manage Shipments
+            </Link>
+
+            <Link
+              href="/dashboard/shipments/new"
+              className="inline-flex items-center rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-800"
+            >
+              + Create Shipment
+            </Link>
+          </div>
+
+          <div className="mt-6 flex gap-3">
+            <Link href="/admin/shipments" className="rounded-full px-4 py-2 bg-blue-600 text-white font-semibold">
+              Shipments
+            </Link>
+            <Link href="/dashboard/vehicles" className="rounded-full px-4 py-2 border border-slate-700 text-slate-100">
+              Vehicles
+            </Link>
+            <Link href="/dashboard/tracking" className="rounded-full px-4 py-2 border border-slate-700 text-slate-100">
+              Tracking
+            </Link>
           </div>
         </div>
 
