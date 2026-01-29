@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabase-admin';
-import { sendShipmentUpdateEmail } from '@/lib/server/email';
-import { publicEnv } from '@/lib/env/public';
-import { serverEnv } from '@/lib/env/server';
+import { sendShipmentStatusUpdatedEmail } from '@/lib/server/mailer';
 import { createSupabaseRouteClient } from '@/lib/server/supabase-route';
 
 const allowedStatuses = new Set(['pending', 'picked_up', 'in_transit', 'delivered', 'cancelled']);
@@ -20,7 +18,6 @@ type ShipmentLookupRow = {
 };
 
 type ProfileEmailRow = { email: string | null };
-type CompanyNameRow = { name: string | null };
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -97,39 +94,32 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   const shipmentRow = shipment as ShipmentLookupRow;
-  const [{ data: customerProfile }, { data: company }] = await Promise.all([
+  const [{ data: customerProfile }] = await Promise.all([
     shipmentRow.customer_email
       ? Promise.resolve({ data: null })
       : supabaseAdmin.from('profiles').select('email').eq('id', shipmentRow.customer_id).single(),
-    supabaseAdmin.from('companies').select('name').eq('id', shipmentRow.company_id).single(),
   ]);
 
   const to =
     shipmentRow.customer_email ||
     (customerProfile as ProfileEmailRow | null)?.email ||
     undefined;
-  const companyName = (company as CompanyNameRow | null)?.name || 'AFGHCO';
-
-  const appUrl = publicEnv.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
-  const trackingUrl = `${appUrl}/tracking?ref=${encodeURIComponent(shipmentRow.reference_number)}`;
 
   if (to) {
-    await sendShipmentUpdateEmail({
+    void sendShipmentStatusUpdatedEmail({
       to,
-      template: status === 'delivered' ? 'delivered' : 'update',
-      brandName: companyName,
-      supportEmail: serverEnv.SUPPORT_EMAIL ?? undefined,
-      customerName: shipmentRow.customer_name ?? undefined,
       referenceNumber: shipmentRow.reference_number,
-      originAddress: (shipmentRow as { origin_address?: string | null }).origin_address ?? undefined,
+      customerName: shipmentRow.customer_name ?? undefined,
+      originAddress: shipmentRow.origin_address ?? undefined,
       statusLabel: status,
       locationLabel: status === 'delivered' ? 'Delivered' : 'Status update',
       eventTime: new Date().toISOString(),
       eventNotes: shipmentRow.customer_name ? `Hello ${shipmentRow.customer_name},` : undefined,
       destinationAddress: shipmentRow.destination_address ?? undefined,
       deliveredAt: status === 'delivered' ? new Date().toISOString() : undefined,
-      trackingUrl,
-    }).catch((err) => console.warn('sendShipmentUpdateEmail failed', err));
+    }).catch((err) => console.warn('sendShipmentStatusUpdatedEmail failed', err));
+  } else {
+    console.warn('Shipment status update missing customer_email; skipping email');
   }
 
   return NextResponse.json({ ok: true, shipment: updated });

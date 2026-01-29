@@ -26,6 +26,8 @@ export default function NewShipmentPage() {
   const { user, profile, isLoading } = useAuth();
 
   const canCreate = !!user && !!profile && (profile.role === 'admin' || profile.role === 'dispatcher');
+  const isAdmin = profile?.role === 'admin';
+  const isDispatcher = profile?.role === 'dispatcher';
 
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FormState>({
@@ -41,11 +43,43 @@ export default function NewShipmentPage() {
     description: '',
     estimated_delivery: '',
   });
+  const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
     if (!profile?.company_id) return;
     setForm((prev) => (prev.company_id ? prev : { ...prev, company_id: profile.company_id ?? '' }));
   }, [profile?.company_id]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    let active = true;
+
+    const loadCompanies = async () => {
+      try {
+        const res = await apiFetch('/api/admin/companies', {
+          method: 'GET',
+          headers: { 'content-type': 'application/json' },
+        });
+        const json = (await res.json()) as { companies?: Array<{ id: string; name: string }>; error?: string };
+        if (!res.ok) throw new Error(json.error || 'Failed to load companies');
+        if (!active) return;
+        const list = json.companies ?? [];
+        setCompanies(list);
+        if (!form.company_id && list.length === 1) {
+          setForm((prev) => ({ ...prev, company_id: list[0].id }));
+        }
+      } catch (err: unknown) {
+        if (!active) return;
+        console.error(err);
+      }
+    };
+
+    void loadCompanies();
+
+    return () => {
+      active = false;
+    };
+  }, [isAdmin, form.company_id]);
 
   const parsedWeight = useMemo(() => {
     const trimmed = form.weight_kg.trim();
@@ -62,9 +96,15 @@ export default function NewShipmentPage() {
       return;
     }
 
-    const companyId = profile?.company_id?.trim() || '';
+    const companyId = isDispatcher ? profile?.company_id?.trim() || '' : form.company_id.trim();
     if (!companyId) {
-      toast.error('Missing company ID on your profile');
+      toast.error(isAdmin ? 'Select a company to continue' : 'Missing company ID on your profile');
+      return;
+    }
+
+    const emailRegex = /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/;
+    if (!emailRegex.test(form.customer_email.trim())) {
+      toast.error('Enter a valid customer email');
       return;
     }
 
@@ -86,6 +126,7 @@ export default function NewShipmentPage() {
           customer_name: form.customer_name,
           customer_email: form.customer_email,
           customer_phone: form.customer_phone,
+          company_id: companyId,
           reference_number: form.reference_number,
           origin_address: form.origin_address,
           destination_address: form.destination_address,
@@ -146,16 +187,36 @@ export default function NewShipmentPage() {
             <label className="block text-slate-300 font-semibold mb-2" htmlFor="company_id">
               Company ID
             </label>
-            <input
-              id="company_id"
-              name="company_id"
-              aria-label="Customer ID"
-              value={form.company_id}
-              onChange={(e) => setForm((f) => ({ ...f, company_id: e.target.value }))}
-              readOnly
-              className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
-              placeholder="UUID"
-            />
+            {isAdmin ? (
+              <select
+                id="company_id"
+                name="company_id"
+                value={form.company_id}
+                onChange={(e) => setForm((f) => ({ ...f, company_id: e.target.value }))}
+                className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
+                required
+              >
+                <option value="" disabled>
+                  Select company
+                </option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id="company_id"
+                name="company_id"
+                aria-label="Company ID"
+                value={form.company_id}
+                onChange={(e) => setForm((f) => ({ ...f, company_id: e.target.value }))}
+                readOnly
+                className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
+                placeholder="UUID"
+              />
+            )}
           </div>
 
           <div>

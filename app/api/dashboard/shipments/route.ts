@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/server/supabase-route';
 import { supabaseAdmin } from '@/lib/server/supabase-admin';
 import { shipmentSchema } from '@/lib/shared/validators';
-import { sendShipmentUpdateEmail } from '@/lib/server/email';
-import { publicEnv } from '@/lib/env/public';
-import { serverEnv } from '@/lib/env/server';
+import { sendShipmentCreatedEmail } from '@/lib/server/mailer';
 
 const PAGE_SIZE = 20;
 const allowedStatuses = new Set(['pending', 'picked_up', 'in_transit', 'delivered', 'cancelled']);
@@ -124,6 +122,7 @@ export async function POST(request: NextRequest) {
         customer_name?: unknown;
         customer_email?: unknown;
         customer_phone?: unknown;
+        company_id?: unknown;
         reference_number?: unknown;
         origin_address?: unknown;
         destination_address?: unknown;
@@ -164,14 +163,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers: response.headers });
   }
 
-  if (!companyId) {
-    return NextResponse.json({ error: 'Missing company on profile' }, { status: 400, headers: response.headers });
-  }
-
   const customer_id = String(body?.customer_id ?? '').trim();
   const customer_name = String(body?.customer_name ?? '').trim();
   const customer_email = String(body?.customer_email ?? '').trim();
   const customer_phone = String(body?.customer_phone ?? '').trim();
+  const bodyCompanyId = String(body?.company_id ?? '').trim();
   const reference_number = String(body?.reference_number ?? '').trim();
   const origin_address = String(body?.origin_address ?? '').trim();
   const destination_address = String(body?.destination_address ?? '').trim();
@@ -210,8 +206,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400, headers: response.headers });
   }
 
-  // Dispatchers are scoped to their own company.
-  const insertCompanyId = companyId;
+  const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  if (!emailRegex.test(customer_email)) {
+    return NextResponse.json({ error: 'Invalid customer email' }, { status: 400, headers: response.headers });
+  }
+
+  let insertCompanyId: string | null = null;
+
+  if (role === 'dispatcher') {
+    if (!companyId) {
+      return NextResponse.json({ error: 'Missing company on profile' }, { status: 400, headers: response.headers });
+    }
+    insertCompanyId = companyId;
+  } else {
+    insertCompanyId = bodyCompanyId || companyId || null;
+    if (!insertCompanyId) {
+      const { data: companies } = await supabaseAdmin
+        .from('companies')
+        .select('id')
+        .limit(2);
+      if ((companies ?? []).length === 1) {
+        insertCompanyId = companies?.[0]?.id ?? null;
+      }
+    }
+  }
+
+  if (!insertCompanyId) {
+    return NextResponse.json({ error: 'Company is required for shipment creation' }, { status: 400, headers: response.headers });
+  }
 
   const { data: created, error: createErr } = await supabaseAdmin
     .from('shipments')
@@ -236,33 +258,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: createErr?.message || 'Create failed' }, { status: 400, headers: response.headers });
   }
 
-  const { data: company } = await supabaseAdmin
-    .from('companies')
-    .select('name')
-    .eq('id', insertCompanyId)
-    .maybeSingle();
-
-  const companyName = (company as { name?: string | null } | null)?.name || 'AFGHCO';
-  const appUrl = publicEnv.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
-  const trackingUrl = `${appUrl}/tracking?ref=${encodeURIComponent(reference_number)}`;
-
   if (customer_email) {
-    await sendShipmentUpdateEmail({
+    void sendShipmentCreatedEmail({
       to: customer_email,
-      template: 'created',
-      brandName: companyName,
-      supportEmail: serverEnv.SUPPORT_EMAIL ?? undefined,
-      customerName: customer_name,
       referenceNumber: reference_number,
+      customerName: customer_name,
       originAddress: origin_address,
       destinationAddress: destination_address,
-      statusLabel: 'Pending',
       estimatedDelivery: estimated_delivery || '—',
+      statusLabel: 'Pending',
       locationLabel: 'Shipment created',
       eventTime: new Date().toISOString(),
       eventNotes: 'Shipment created',
-      trackingUrl,
-    }).catch((err) => console.warn('sendShipmentUpdateEmail failed', err));
+    }).catch((err) => console.warn('sendShipmentCreatedEmail failed', err));
+  } else {
+    console.warn('Shipment created without customer_email; skipping email');
   }
 
   return NextResponse.json({ id: created.id }, { status: 200, headers: response.headers });

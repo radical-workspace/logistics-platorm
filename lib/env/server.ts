@@ -37,15 +37,15 @@ if (process.env.NODE_ENV !== 'production') {
 const serverEnvSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
   SUPABASE_JWT_SECRET: z.string().min(1).optional(),
-  SMTP_HOST: z.string().min(1).optional(),
-  SMTP_PORT: z.string().min(1).optional(),
-  SMTP_USER: z.string().min(1).optional(),
-  SMTP_PASS: z.string().min(1).optional(),
+  GMAIL_USER: z.string().min(1).optional(),
+  GMAIL_APP_PASSWORD: z.string().min(1).optional(),
+  APP_BASE_URL: z.string().min(1).optional(),
   EMAIL_FROM: z.string().min(1).optional(),
   BRAND_NAME: z.string().min(1).optional(),
   BRAND_LOGO_URL: z.string().min(1).optional(),
   BRAND_ADDRESS: z.string().min(1).optional(),
   SUPPORT_EMAIL: z.string().min(1).optional(),
+  NODE_ENV: z.string().min(1).optional(),
 });
 
 type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -55,14 +55,14 @@ export const serverEnv: ServerEnv & typeof publicEnv = {
   ...serverEnvSchema.parse({
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     SUPABASE_JWT_SECRET: process.env.SUPABASE_JWT_SECRET,
-    SMTP_HOST: process.env.SMTP_HOST,
-    SMTP_PORT: process.env.SMTP_PORT,
-    SMTP_USER: process.env.SMTP_USER,
-    SMTP_PASS: process.env.SMTP_PASS,
+    GMAIL_USER: process.env.GMAIL_USER,
+    GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD,
+    APP_BASE_URL: process.env.APP_BASE_URL,
     EMAIL_FROM: process.env.EMAIL_FROM,
     BRAND_NAME: process.env.BRAND_NAME,
     BRAND_LOGO_URL: process.env.BRAND_LOGO_URL,
     BRAND_ADDRESS: process.env.BRAND_ADDRESS,
     SUPPORT_EMAIL: process.env.SUPPORT_EMAIL,
+    NODE_ENV: process.env.NODE_ENV,
   }),
 };
