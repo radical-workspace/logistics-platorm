@@ -42,6 +42,10 @@ const serverEnvSchema = z.object({
   SMTP_USER: z.string().min(1).optional(),
   SMTP_PASS: z.string().min(1).optional(),
   EMAIL_FROM: z.string().min(1).optional(),
+  BRAND_NAME: z.string().min(1).optional(),
+  BRAND_LOGO_URL: z.string().min(1).optional(),
+  BRAND_ADDRESS: z.string().min(1).optional(),
+  SUPPORT_EMAIL: z.string().min(1).optional(),
 });
 
 type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -56,5 +60,9 @@ export const serverEnv: ServerEnv & typeof publicEnv = {
     SMTP_USER: process.env.SMTP_USER,
     SMTP_PASS: process.env.SMTP_PASS,
     EMAIL_FROM: process.env.EMAIL_FROM,
+    BRAND_NAME: process.env.BRAND_NAME,
+    BRAND_LOGO_URL: process.env.BRAND_LOGO_URL,
+    BRAND_ADDRESS: process.env.BRAND_ADDRESS,
+    SUPPORT_EMAIL: process.env.SUPPORT_EMAIL,
   }),
 };

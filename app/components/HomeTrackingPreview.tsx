@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import TrackingMap from '@/app/components/TrackingMap';
 import { apiFetch } from '@/lib/client/api';
+import TrackingProgressBox from '@/app/components/TrackingProgressBox';
 
 type TrackShipmentRow = {
   shipment_id: string;
@@ -137,6 +138,7 @@ export default function HomeTrackingPreview() {
           label: row?.last_event_type ? `Last update: ${row.last_event_type}` : undefined,
         }}
       />
+      {row ? <TrackingProgressBox data={row} /> : null}
     </div>
   );
 }

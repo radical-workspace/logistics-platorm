@@ -1,8 +1,8 @@
 'use client';
-/* eslint-disable @next/next/no-img-element */
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { BrandLogo } from '@/app/components/BrandLogo';
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -24,17 +24,7 @@ export default function Header() {
     <header className="fixed top-0 w-full z-50 bg-slate-900/90 backdrop-blur border-b border-slate-800 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center gap-3">
-          <img
-            src="https://raw.githubusercontent.com/radical-workspace/afghco/f2cd497770b60ccde1925c07b3d01b14e5302fdf/logo.png"
-            alt="AFGHCO Logo"
-            className="w-10 h-10 object-contain rounded-lg"
-          />
-          <div className="leading-tight">
-            <div className="font-black tracking-wide">AFGHCO</div>
-            <div className="text-[10px] tracking-[0.65em] text-blue-400">LOGISTICS CONTROL</div>
-          </div>
-        </div>
+        <BrandLogo />
 
         {/* Desktop Nav */}
         <nav className="hidden lg:flex items-center gap-8 text-sm font-semibold text-slate-300">

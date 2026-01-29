@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/server/supabase-admin';
 import { shipmentSchema } from '@/lib/shared/validators';
 import { sendShipmentUpdateEmail } from '@/lib/server/email';
 import { publicEnv } from '@/lib/env/public';
+import { serverEnv } from '@/lib/env/server';
 
 const PAGE_SIZE = 20;
 const allowedStatuses = new Set(['pending', 'picked_up', 'in_transit', 'delivered', 'cancelled']);
@@ -248,11 +249,18 @@ export async function POST(request: NextRequest) {
   if (customer_email) {
     await sendShipmentUpdateEmail({
       to: customer_email,
-      companyName,
+      template: 'created',
+      brandName: companyName,
+      supportEmail: serverEnv.SUPPORT_EMAIL ?? undefined,
+      customerName: customer_name,
       referenceNumber: reference_number,
-      status: 'pending',
-      updateTitle: 'Shipment created',
-      updateBody: `Shipment created for ${customer_name}.`,
+      originAddress: origin_address,
+      destinationAddress: destination_address,
+      statusLabel: 'Pending',
+      estimatedDelivery: estimated_delivery || '—',
+      locationLabel: 'Shipment created',
+      eventTime: new Date().toISOString(),
+      eventNotes: 'Shipment created',
       trackingUrl,
     }).catch((err) => console.warn('sendShipmentUpdateEmail failed', err));
   }

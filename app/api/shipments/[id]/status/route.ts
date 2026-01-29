@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabase-admin';
 import { sendShipmentUpdateEmail } from '@/lib/server/email';
 import { publicEnv } from '@/lib/env/public';
+import { serverEnv } from '@/lib/env/server';
 import { createSupabaseRouteClient } from '@/lib/server/supabase-route';
 
 const allowedStatuses = new Set(['pending', 'picked_up', 'in_transit', 'delivered', 'cancelled']);
@@ -14,6 +15,8 @@ type ShipmentLookupRow = {
   customer_id: string;
   customer_name: string | null;
   customer_email: string | null;
+  destination_address?: string | null;
+  origin_address?: string | null;
 };
 
 type ProfileEmailRow = { email: string | null };
@@ -61,7 +64,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const { data: shipment, error: shipmentErr } = await supabaseAdmin
     .from('shipments')
-    .select('id,reference_number,status,company_id,customer_id,customer_name,customer_email')
+    .select('id,reference_number,status,company_id,customer_id,customer_name,customer_email,destination_address,origin_address')
     .eq('id', id)
     .single();
 
@@ -113,11 +116,18 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (to) {
     await sendShipmentUpdateEmail({
       to,
-      companyName,
+      template: status === 'delivered' ? 'delivered' : 'update',
+      brandName: companyName,
+      supportEmail: serverEnv.SUPPORT_EMAIL ?? undefined,
+      customerName: shipmentRow.customer_name ?? undefined,
       referenceNumber: shipmentRow.reference_number,
-      status,
-      updateTitle: 'Shipment status updated',
-      updateBody: shipmentRow.customer_name ? `Hello ${shipmentRow.customer_name},` : null,
+      originAddress: (shipmentRow as { origin_address?: string | null }).origin_address ?? undefined,
+      statusLabel: status,
+      locationLabel: status === 'delivered' ? 'Delivered' : 'Status update',
+      eventTime: new Date().toISOString(),
+      eventNotes: shipmentRow.customer_name ? `Hello ${shipmentRow.customer_name},` : undefined,
+      destinationAddress: shipmentRow.destination_address ?? undefined,
+      deliveredAt: status === 'delivered' ? new Date().toISOString() : undefined,
       trackingUrl,
     }).catch((err) => console.warn('sendShipmentUpdateEmail failed', err));
   }

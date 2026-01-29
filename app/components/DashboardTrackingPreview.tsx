@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import TrackingMap from '@/app/components/TrackingMap';
 import SimulatedMapPreview from '@/app/components/SimulatedMapPreview';
+import TrackingProgressBox from '@/app/components/TrackingProgressBox';
 import { apiFetch } from '@/lib/client/api';
 
 type TrackShipmentRow = {
@@ -134,25 +135,28 @@ export default function DashboardTrackingPreview() {
       </div>
 
       {row ? (
-        <TrackingMap
-          origin={{ lat: row.origin_lat ?? null, lng: row.origin_lng ?? null, label: row.origin_address }}
-          destination={{ lat: row.dest_lat ?? null, lng: row.dest_lng ?? null, label: row.destination_address }}
-          events={events.map((event) => ({
-            lat: event.latitude,
-            lng: event.longitude,
-            type: event.event_type ?? undefined,
-            at: event.created_at ?? undefined,
-            notes: event.notes ?? undefined,
-          }))}
-          status={row.status}
-          lastUpdateAt={row.last_event_at ?? null}
-          lastNotes={row.last_event_notes ?? null}
-          lastEvent={{
-            lat: row.last_event_lat ?? null,
-            lng: row.last_event_lng ?? null,
-            label: row.last_event_type ? `Last update: ${row.last_event_type}` : undefined,
-          }}
-        />
+        <div className="mt-4 grid gap-4">
+          <TrackingMap
+            origin={{ lat: row.origin_lat ?? null, lng: row.origin_lng ?? null, label: row.origin_address }}
+            destination={{ lat: row.dest_lat ?? null, lng: row.dest_lng ?? null, label: row.destination_address }}
+            events={events.map((event) => ({
+              lat: event.latitude,
+              lng: event.longitude,
+              type: event.event_type ?? undefined,
+              at: event.created_at ?? undefined,
+              notes: event.notes ?? undefined,
+            }))}
+            status={row.status}
+            lastUpdateAt={row.last_event_at ?? null}
+            lastNotes={row.last_event_notes ?? null}
+            lastEvent={{
+              lat: row.last_event_lat ?? null,
+              lng: row.last_event_lng ?? null,
+              label: row.last_event_type ? `Last update: ${row.last_event_type}` : undefined,
+            }}
+          />
+          <TrackingProgressBox data={row} />
+        </div>
       ) : (
         <SimulatedMapPreview
           subtitle={hasRef ? 'Waiting for tracking data…' : 'Simulated map view (mobile-first)'}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import TrackingMap from "@/app/components/TrackingMap";
+import TrackingProgressBox from "@/app/components/TrackingProgressBox";
 import { supabaseBrowser } from "@/lib/client/supabase";
 
 type TrackShipmentRow = {
@@ -179,6 +180,7 @@ export default function TrackingLiveClient({
             label: lastUpdateLabel,
           }}
         />
+        <TrackingProgressBox data={row} />
       </div>
     </div>
   );

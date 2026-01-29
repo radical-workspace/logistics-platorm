@@ -4,6 +4,7 @@ import { createSupabaseRouteClient } from '@/lib/server/supabase-route';
 import { supabaseAdmin } from '@/lib/server/supabase-admin';
 import { sendShipmentUpdateEmail } from '@/lib/server/email';
 import { publicEnv } from '@/lib/env/public';
+import { serverEnv } from '@/lib/env/server';
 
 const allowedStatuses = new Set(['pending', 'picked_up', 'in_transit', 'delivered', 'cancelled']);
 
@@ -198,17 +199,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const trackingUrl = `${appUrl}/tracking?ref=${encodeURIComponent(shipmentRow.reference_number || id)}`;
 
   if (to && (statusToApply || locationLabel || latitude !== null || longitude !== null || notes)) {
-    const updateTitle = statusToApply ? 'Shipment status updated' : 'Shipment location updated';
-    const updateBody = statusToApply
-      ? `Hello ${shipmentRow.customer_name ?? 'there'}, your shipment is now ${statusToApply}.`
-      : combinedNotes;
+    const template = statusToApply === 'delivered' ? 'delivered' : 'update';
     await sendShipmentUpdateEmail({
       to,
-      companyName,
+      template,
+      brandName: companyName,
+      supportEmail: serverEnv.SUPPORT_EMAIL ?? undefined,
+      customerName: shipmentRow.customer_name ?? undefined,
       referenceNumber: shipmentRow.reference_number || id,
-      status: statusToApply || currentStatus || 'in_transit',
-      updateTitle,
-      updateBody,
+      originAddress: (shipment as { origin_address?: string | null }).origin_address ?? undefined,
+      destinationAddress: (shipment as { destination_address?: string | null }).destination_address ?? undefined,
+      statusLabel: statusToApply || currentStatus || 'in_transit',
+      locationLabel: locationLabel || (statusToApply ? `Status changed to ${statusToApply}` : 'Location update'),
+      eventTime: (event as { created_at?: string | null } | null)?.created_at ?? new Date().toISOString(),
+      eventNotes: combinedNotes || notes || undefined,
+      deliveredAt:
+        statusToApply === 'delivered'
+          ? (updatedShipment as { actual_delivery?: string | null }).actual_delivery ?? new Date().toISOString()
+          : undefined,
       trackingUrl,
     }).catch((err) => console.warn('sendShipmentUpdateEmail failed', err));
   }
