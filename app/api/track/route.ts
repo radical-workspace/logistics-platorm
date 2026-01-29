@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/server/supabase-admin';
-
-export const runtime = 'nodejs';
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+import { publicEnv } from "@/lib/env/public";
 
 type TrackShipmentRow = {
   shipment_id: string;
@@ -22,25 +22,83 @@ type TrackShipmentRow = {
   last_event_lng: string | number | null;
 };
 
-export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  const ref = (url.searchParams.get('ref') || '').trim();
+type TrackShipmentEvent = {
+  event_type: string | null;
+  notes: string | null;
+  created_at: string;
+  latitude: string | number | null;
+  longitude: string | number | null;
+};
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const ref = (searchParams.get("ref") || "").trim();
 
   if (!ref) {
-    return NextResponse.json({ data: null, error: 'Missing ref' }, { status: 400 });
+    return NextResponse.json(
+      { data: null, events: [], error: "Missing ref" },
+      { status: 400 },
+    );
   }
   if (ref.length > 80) {
-    return NextResponse.json({ data: null, error: 'Invalid ref' }, { status: 400 });
+    return NextResponse.json(
+      { data: null, events: [], error: "Invalid ref" },
+      { status: 400 },
+    );
   }
 
-  const { data, error } = await supabaseAdmin.rpc('track_shipment', { p_reference_number: ref });
-  if (error) return NextResponse.json({ data: null, error: error.message }, { status: 500 });
+  const cookieStore = await cookies();
 
-  const row = (Array.isArray(data) ? (data[0] ?? null) : (data ?? null)) as TrackShipmentRow | null;
+  const supabase = createServerClient(
+    publicEnv.NEXT_PUBLIC_SUPABASE_URL,
+    publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll() {
+          /* no-op */
+        },
+      },
+    },
+  );
+
+  const { data, error } = await supabase.rpc("track_shipment", {
+    p_reference_number: ref,
+  });
+
+  if (error) {
+    return NextResponse.json(
+      { data: null, events: [], error: error.message },
+      { status: 500 },
+    );
+  }
+
+  const row = (Array.isArray(data) ? data[0] ?? null : data ?? null) as
+    | TrackShipmentRow
+    | null;
+
   if (!row?.shipment_id) {
-    return NextResponse.json({ data: null, error: null }, { status: 200 });
+    return NextResponse.json({ data: null, events: [], error: null });
   }
 
-  return NextResponse.json({ data: row, error: null }, { status: 200 });
-}
+  const { data: eventsData, error: eventsError } = await supabase
+    .from("shipment_events")
+    .select("event_type, notes, created_at, latitude, longitude")
+    .eq("shipment_id", row.shipment_id)
+    .not("latitude", "is", null)
+    .not("longitude", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(50);
 
+  if (eventsError) {
+    return NextResponse.json({ data: row, events: [], error: null });
+  }
+
+  const events: TrackShipmentEvent[] = Array.isArray(eventsData)
+    ? [...eventsData].reverse()
+    : [];
+
+  return NextResponse.json({ data: row, events, error: null });
+}

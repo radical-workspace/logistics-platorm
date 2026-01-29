@@ -1,314 +1,400 @@
 "use client";
-
-import { useEffect, useMemo, useRef, useState } from "react";
-import "maplibre-gl/dist/maplibre-gl.css";
-import SimulatedMapPreview from "@/app/components/SimulatedMapPreview";
-
-// Type-only imports (no runtime cost)
-import type {
-  Map as MLMap,
-  Marker as MLMarker,
-  Popup as MLPopup,
-  GeoJSONSource as MLGeoJSONSource,
-  LngLatBounds as MLLngLatBounds,
+import { useEffect, useMemo, useRef } from "react";
+import maplibregl, {
+  type GeoJSONSource,
+  type LngLatBoundsLike,
+  type Map as MapLibreMap,
+  type Marker as MapLibreMarker,
 } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 
-type MapLibreModule = typeof import("maplibre-gl");
+type LatLngLike = string | number | null | undefined;
 
-type TrackingMapProps = {
-  origin: {
-    lat: string | number | null;
-    lng: string | number | null;
-    label?: string;
-  };
-  destination: {
-    lat: string | number | null;
-    lng: string | number | null;
-    label?: string;
-  };
-  lastEvent?: {
-    lat: string | number | null;
-    lng: string | number | null;
-    label?: string;
-  };
+type PointInput = {
+  lat: LatLngLike;
+  lng: LatLngLike;
+  label?: string | null;
 };
-
-type Point = { lat: number; lng: number; label?: string };
-type ResolvedPoints = {
-  origin: Point | null;
-  destination: Point | null;
-  lastEvent: Point | null;
-};
-
-function toNumber(value: unknown): number | null {
-  if (value === null || value === undefined) return null;
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-}
-
-const DEFAULT_ROUTE: ResolvedPoints = {
-  origin: { lat: 34.5553, lng: 69.2075, label: "Kabul Air Hub" },
-  destination: { lat: 25.2048, lng: 55.2708, label: "Dubai Gateway" },
-  lastEvent: {
-    lat: 31.5497,
-    lng: 74.3436,
-    label: "In transit — Lahore checkpoint",
-  },
-};
-
-const ROUTE_SOURCE_ID = "afghco-route";
-const ROUTE_LAYER_ID = "afghco-route-line";
-
-function isGeoJSONSource(src: unknown): src is MLGeoJSONSource {
-  return !!src && typeof src === "object" && "setData" in src;
-}
 
 export default function TrackingMap({
   origin,
   destination,
   lastEvent,
-}: TrackingMapProps) {
+  events,
+}: {
+  origin?: PointInput;
+  destination?: PointInput;
+  lastEvent?: PointInput;
+  events?: Array<{
+    lat: number | string | null;
+    lng: number | string | null;
+    type?: string;
+    at?: string;
+    notes?: string;
+  }>;
+  status?: string;
+  lastUpdateAt?: string | null;
+  lastNotes?: string | null;
+}) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
 
-  // Keep refs so we do NOT recreate the map on every update
-  const maplibreRef = useRef<MapLibreModule | null>(null);
-  const mapRef = useRef<MLMap | null>(null);
   const markersRef = useRef<{
-    origin?: MLMarker;
-    destination?: MLMarker;
-    lastEvent?: MLMarker;
+    origin?: MapLibreMarker;
+    destination?: MapLibreMarker;
+    current?: MapLibreMarker;
   }>({});
+  const pulseRef = useRef<MapLibreMarker | null>(null);
 
-  const [mapFailed, setMapFailed] = useState(false);
-  const [mapReady, setMapReady] = useState(false);
+  const asNumber = (v: LatLngLike): number | null => {
+    if (v === null || v === undefined) return null;
+    const n = typeof v === "string" ? Number(v) : v;
+    return Number.isFinite(n) ? n : null;
+  };
 
-  const points: ResolvedPoints = useMemo(() => {
-    const originLat = toNumber(origin.lat);
-    const originLng = toNumber(origin.lng);
-    const destLat = toNumber(destination.lat);
-    const destLng = toNumber(destination.lng);
-    const lastLat = toNumber(lastEvent?.lat);
-    const lastLng = toNumber(lastEvent?.lng);
+  const normalized = useMemo(() => {
+    const oLat = asNumber(origin?.lat);
+    const oLng = asNumber(origin?.lng);
+    const dLat = asNumber(destination?.lat);
+    const dLng = asNumber(destination?.lng);
+    const eLat = asNumber(lastEvent?.lat);
+    const eLng = asNumber(lastEvent?.lng);
 
-    return {
-      origin:
-        originLat !== null && originLng !== null
-          ? { lat: originLat, lng: originLng, label: origin.label }
-          : null,
-      destination:
-        destLat !== null && destLng !== null
-          ? { lat: destLat, lng: destLng, label: destination.label }
-          : null,
-      lastEvent:
-        lastLat !== null && lastLng !== null
-          ? { lat: lastLat, lng: lastLng, label: lastEvent?.label }
-          : null,
-    };
+    const o = oLat !== null && oLng !== null ? ([oLng, oLat] as const) : null;
+    const d = dLat !== null && dLng !== null ? ([dLng, dLat] as const) : null;
+    const e = eLat !== null && eLng !== null ? ([eLng, eLat] as const) : null;
+
+    return { o, d, e };
   }, [
-    origin.lat,
-    origin.lng,
-    origin.label,
-    destination.lat,
-    destination.lng,
-    destination.label,
+    origin?.lat,
+    origin?.lng,
+    destination?.lat,
+    destination?.lng,
     lastEvent?.lat,
     lastEvent?.lng,
-    lastEvent?.label,
   ]);
 
-  const resolved: ResolvedPoints = useMemo(() => {
-    const hasAny = points.origin || points.destination || points.lastEvent;
-    return hasAny ? points : DEFAULT_ROUTE;
-  }, [points]);
+  const eventCoords = useMemo(() => {
+    return (events ?? [])
+      .map((event) => {
+        const lat = asNumber(event.lat);
+        const lng = asNumber(event.lng);
+        if (lat === null || lng === null) return null;
+        return [lng, lat] as [number, number];
+      })
+      .filter((coord): coord is [number, number] => coord !== null);
+  }, [events]);
 
-  // 1) Initialize the map ONCE
+  const lastEventCoord = useMemo(() => {
+    if (eventCoords.length > 0) return eventCoords[eventCoords.length - 1];
+    return normalized.e;
+  }, [eventCoords, normalized.e]);
+
+  const routeGeoJson = useMemo(() => {
+    const routeCoords: Array<[number, number]> = [];
+
+    if (normalized.o) routeCoords.push([normalized.o[0], normalized.o[1]]);
+    eventCoords.forEach((coord) => routeCoords.push(coord));
+    if (normalized.d) routeCoords.push([normalized.d[0], normalized.d[1]]);
+
+    if (routeCoords.length < 2) {
+      return {
+        type: "FeatureCollection",
+        features: [],
+      } as GeoJSON.FeatureCollection<GeoJSON.LineString>;
+    }
+
+    return {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates: routeCoords.map(([lng, lat]) => [
+              Number(lng),
+              Number(lat),
+            ]),
+          },
+        },
+      ],
+    } as GeoJSON.FeatureCollection<GeoJSON.LineString>;
+  }, [normalized.o, normalized.d, eventCoords]);
+
+  const bounds = useMemo(() => {
+    const pts = [normalized.o, ...eventCoords, normalized.d].filter(
+      Boolean,
+    ) as Array<[number, number]>;
+    if (pts.length === 0) return null;
+
+    let minLng = pts[0][0];
+    let maxLng = pts[0][0];
+    let minLat = pts[0][1];
+    let maxLat = pts[0][1];
+
+    for (const [lng, lat] of pts) {
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
+
+    // Add a bit of padding by expanding bounds slightly
+    const padLng = Math.max(0.01, (maxLng - minLng) * 0.15);
+    const padLat = Math.max(0.01, (maxLat - minLat) * 0.15);
+
+    const b: LngLatBoundsLike = [
+      [minLng - padLng, minLat - padLat],
+      [maxLng + padLng, maxLat + padLat],
+    ];
+    return b;
+  }, [normalized.o, normalized.d, eventCoords, normalized.e]);
+
+  // Create map ONCE
   useEffect(() => {
     if (!containerRef.current) return;
+    if (mapRef.current) return;
 
-    let cancelled = false;
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: "https://demotiles.maplibre.org/style.json",
+      center: [0, 0],
+      zoom: 2,
+    });
 
-    const init = async () => {
-      try {
-        const maplibregl = await import("maplibre-gl");
-        if (cancelled) return;
+    map.addControl(
+      new maplibregl.NavigationControl({ visualizePitch: true }),
+      "top-right",
+    );
 
-        maplibreRef.current = maplibregl;
+    map.on("load", () => {
+      // Route source + layer
+      map.addSource("route", {
+        type: "geojson",
+        data: routeGeoJson,
+      });
 
-        const initialCenter: [number, number] = (() => {
-          if (resolved.lastEvent)
-            return [resolved.lastEvent.lng, resolved.lastEvent.lat];
-          if (resolved.origin)
-            return [resolved.origin.lng, resolved.origin.lat];
-          if (resolved.destination)
-            return [resolved.destination.lng, resolved.destination.lat];
-          return [66.0, 33.0];
-        })();
+      map.addSource("checkpoints", {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: [],
+        },
+      });
 
-        const map = new maplibregl.Map({
-          container: containerRef.current as HTMLElement,
-          style:
-            "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-          center: initialCenter,
-          zoom: 4,
-        });
+      map.addLayer({
+        id: "route-line",
+        type: "line",
+        source: "route",
+        paint: {
+          "line-width": 4,
+          "line-opacity": 0.9,
+        },
+        layout: {
+          "line-join": "round",
+          "line-cap": "round",
+        },
+      });
 
-        mapRef.current = map;
+      // Make it dashed (enterprise-looking “in transit” feel)
+      map.setPaintProperty("route-line", "line-dasharray", [2, 2]);
 
-        map.on("load", () => {
-          if (!map.getSource(ROUTE_SOURCE_ID)) {
-            map.addSource(ROUTE_SOURCE_ID, {
-              type: "geojson",
-              data: {
-                type: "Feature",
-                properties: {},
-                geometry: { type: "LineString", coordinates: [] },
-              },
-            });
-          }
+      map.addLayer({
+        id: "checkpoint-circles",
+        type: "circle",
+        source: "checkpoints",
+        paint: {
+          "circle-color": "#22d3ee",
+          "circle-radius": 4,
+          "circle-stroke-color": "#0f172a",
+          "circle-stroke-width": 1.5,
+          "circle-opacity": 0.9,
+        },
+      });
 
-          if (!map.getLayer(ROUTE_LAYER_ID)) {
-            map.addLayer({
-              id: ROUTE_LAYER_ID,
-              type: "line",
-              source: ROUTE_SOURCE_ID,
-              paint: {
-                "line-color": "#22d3ee",
-                "line-width": 4,
-                "line-dasharray": [1.5, 1.5],
-              },
-            });
-          }
-
-          setMapReady(true);
-        });
-
-        setMapFailed(false);
-      } catch {
-        if (cancelled) return;
-        setMapFailed(true);
+      // Fit to bounds when we have them
+      if (bounds) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
       }
-    };
+    });
 
-    void init();
+    mapRef.current = map;
 
     return () => {
-      cancelled = true;
-
-      // Cleanup markers
-      const ms = markersRef.current;
-      Object.values(ms).forEach((m) => m?.remove());
-      markersRef.current = {};
-
-      // Cleanup map
-      mapRef.current?.remove();
+      if (pulseRef.current) {
+        pulseRef.current.remove();
+        pulseRef.current = null;
+      }
+      map.remove();
       mapRef.current = null;
-      maplibreRef.current = null;
-      setMapReady(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 2) Update markers, route, and viewport whenever resolved points change
+  // Update route + markers whenever data changes
   useEffect(() => {
-    if (!mapReady) return;
-
     const map = mapRef.current;
-    const MapLibre = maplibreRef.current;
-    if (!map || !MapLibre) return;
+    if (!map) return;
 
-    const bounds: MLLngLatBounds = new MapLibre.LngLatBounds();
+    // Update route geojson
+    const src = map.getSource("route") as GeoJSONSource | undefined;
+    if (src) src.setData(routeGeoJson);
 
+    const checkpointSrc = map.getSource("checkpoints") as GeoJSONSource | undefined;
+    if (checkpointSrc) {
+      checkpointSrc.setData({
+        type: "FeatureCollection",
+        features: eventCoords.map((coord) => ({
+          type: "Feature",
+          properties: {},
+          geometry: { type: "Point", coordinates: coord },
+        })),
+      });
+    }
+
+    // Markers helpers
     const upsertMarker = (
-      key: "origin" | "destination" | "lastEvent",
-      pt: Point | null,
+      key: "origin" | "destination" | "current",
+      coord: [number, number] | null,
+      label: string,
+      cssClass: string,
     ) => {
-      if (!pt) {
-        const existing = markersRef.current[key];
-        existing?.remove();
-        delete markersRef.current[key];
+      const existing = markersRef.current[key];
+
+      if (!coord) {
+        if (existing) {
+          existing.remove();
+          delete markersRef.current[key];
+        }
         return;
       }
 
-      const color = key === "lastEvent" ? "#f97316" : "#2563eb";
+      const el = document.createElement("div");
+      el.className = cssClass;
+      el.title = label;
 
-      let marker = markersRef.current[key];
-      if (!marker) {
-        marker = new MapLibre.Marker({ color }).setLngLat([pt.lng, pt.lat]);
+      // Basic “enterprise” marker look
+      el.style.width = "14px";
+      el.style.height = "14px";
+      el.style.borderRadius = "999px";
+      el.style.border = "2px solid white";
+      el.style.boxShadow = "0 6px 18px rgba(0,0,0,.35)";
 
-        if (pt.label) {
-          const popup: MLPopup = new MapLibre.Popup({ offset: 18 }).setText(
-            pt.label,
-          );
-          marker.setPopup(popup);
-        }
+      if (cssClass === "marker-origin") el.style.background = "#22c55e"; // green
+      if (cssClass === "marker-destination") el.style.background = "#3b82f6"; // blue
+      if (cssClass === "marker-current") el.style.background = "#f59e0b"; // amber
 
-        marker.addTo(map);
-        markersRef.current[key] = marker;
-      } else {
-        marker.setLngLat([pt.lng, pt.lat]);
-        if (pt.label) {
-          const popup: MLPopup = new MapLibre.Popup({ offset: 18 }).setText(
-            pt.label,
-          );
-          marker.setPopup(popup);
-        }
+      if (existing) {
+        existing.setLngLat(coord);
+        return;
       }
 
-      bounds.extend([pt.lng, pt.lat]);
+      const m = new maplibregl.Marker({ element: el })
+        .setLngLat(coord)
+        .addTo(map);
+      markersRef.current[key] = m;
     };
 
-    upsertMarker("origin", resolved.origin);
-    upsertMarker("destination", resolved.destination);
-    upsertMarker("lastEvent", resolved.lastEvent);
-
-    const coords = [resolved.origin, resolved.lastEvent, resolved.destination]
-      .filter((pt): pt is Point => pt !== null)
-      .map((pt) => [pt.lng, pt.lat]);
-
-    const srcUnknown = map.getSource(ROUTE_SOURCE_ID) as unknown;
-    if (isGeoJSONSource(srcUnknown)) {
-      srcUnknown.setData({
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "LineString",
-          coordinates: coords.length >= 2 ? coords : [],
-        },
-      });
-    }
-
-    // Recenter to latest event if available; else fit bounds
-    if (resolved.lastEvent) {
-      map.flyTo({
-        center: [resolved.lastEvent.lng, resolved.lastEvent.lat],
-        zoom: 6,
-        essential: true,
-      });
-    } else if (!bounds.isEmpty()) {
-      map.fitBounds(bounds, { padding: 80, maxZoom: 8 });
-    }
-  }, [mapReady, resolved]);
-
-  if (mapFailed) {
-    return (
-      <SimulatedMapPreview
-        title="Map preview"
-        subtitle="Interactive map temporarily unavailable."
-      />
+    upsertMarker(
+      "origin",
+      normalized.o,
+      origin?.label || "Origin",
+      "marker-origin",
     );
-  }
+    upsertMarker(
+      "destination",
+      normalized.d,
+      destination?.label || "Destination",
+      "marker-destination",
+    );
+    upsertMarker(
+      "current",
+      lastEventCoord,
+      lastEvent?.label || "Current location",
+      "marker-current",
+    );
+
+    if (lastEventCoord) {
+      if (!pulseRef.current) {
+        const el = document.createElement("div");
+        el.className = "tracking-pulse-marker";
+        pulseRef.current = new maplibregl.Marker({ element: el })
+          .setLngLat(lastEventCoord)
+          .addTo(map);
+      } else {
+        pulseRef.current.setLngLat(lastEventCoord);
+      }
+    } else if (pulseRef.current) {
+      pulseRef.current.remove();
+      pulseRef.current = null;
+    }
+
+    // Fit bounds smoothly if we have them
+    if (bounds) {
+      map.fitBounds(bounds, { padding: 50, duration: 600 });
+    } else if (lastEventCoord) {
+      map.easeTo({ center: lastEventCoord, zoom: 10, duration: 600 });
+    }
+  }, [
+    routeGeoJson,
+    bounds,
+    normalized.o,
+    normalized.d,
+    lastEventCoord,
+    origin?.label,
+    destination?.label,
+    lastEvent?.label,
+    eventCoords,
+  ]);
 
   return (
-    <div className="mt-6 bg-slate-900 border border-slate-800 rounded-xl p-4">
-      <div className="text-slate-300 font-semibold">Map</div>
-      <div
-        ref={containerRef}
-        className="mt-3 h-72 sm:h-105 rounded-lg overflow-hidden"
-      />
+    <div className="mt-6">
+      <div className="text-slate-400 text-sm mb-2">Map</div>
+      <div className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
+        <div ref={containerRef} style={{ width: "100%", height: 320 }} />
+      </div>
+
+      <div className="mt-2 text-xs text-slate-500">
+        Green = Origin • Amber = Current location • Blue = Destination
+      </div>
+      <style jsx global>{`
+        .tracking-pulse-marker {
+          position: relative;
+          width: 14px;
+          height: 14px;
+          border-radius: 9999px;
+          background: #f59e0b;
+          box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.8);
+        }
+        .tracking-pulse-marker::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: 34px;
+          height: 34px;
+          margin-left: -17px;
+          margin-top: -17px;
+          border-radius: 9999px;
+          background: rgba(245, 158, 11, 0.35);
+          animation: trackingPulse 2.2s ease-out infinite;
+        }
+        @keyframes trackingPulse {
+          0% {
+            transform: scale(0.35);
+            opacity: 0.8;
+          }
+          70% {
+            transform: scale(1.4);
+            opacity: 0;
+          }
+          100% {
+            transform: scale(1.6);
+            opacity: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 }

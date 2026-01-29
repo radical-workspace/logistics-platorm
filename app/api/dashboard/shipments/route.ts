@@ -118,6 +118,9 @@ export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as
     | {
         customer_id?: unknown;
+        customer_name?: unknown;
+        customer_email?: unknown;
+        customer_phone?: unknown;
         reference_number?: unknown;
         origin_address?: unknown;
         destination_address?: unknown;
@@ -163,6 +166,9 @@ export async function POST(request: NextRequest) {
   }
 
   const customer_id = String(body?.customer_id ?? '').trim();
+  const customer_name = String(body?.customer_name ?? '').trim();
+  const customer_email = String(body?.customer_email ?? '').trim();
+  const customer_phone = String(body?.customer_phone ?? '').trim();
   const reference_number = String(body?.reference_number ?? '').trim();
   const origin_address = String(body?.origin_address ?? '').trim();
   const destination_address = String(body?.destination_address ?? '').trim();
@@ -190,7 +196,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 400, headers: response.headers });
   }
 
-  if (!customer_id || !reference_number || !origin_address || !destination_address) {
+  if (
+    !customer_id ||
+    !customer_name ||
+    !customer_email ||
+    !reference_number ||
+    !origin_address ||
+    !destination_address
+  ) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400, headers: response.headers });
   }
 
@@ -202,6 +215,9 @@ export async function POST(request: NextRequest) {
     .insert({
       company_id: insertCompanyId,
       customer_id,
+      customer_name,
+      customer_email,
+      customer_phone: customer_phone || null,
       reference_number,
       origin_address,
       destination_address,

@@ -10,6 +10,9 @@ import { apiFetch } from '@/lib/client/api';
 type FormState = {
   company_id: string;
   customer_id: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
   reference_number: string;
   origin_address: string;
   destination_address: string;
@@ -28,6 +31,9 @@ export default function NewShipmentPage() {
   const [form, setForm] = useState<FormState>({
     company_id: profile?.company_id ?? '',
     customer_id: '',
+    customer_name: '',
+    customer_email: '',
+    customer_phone: '',
     reference_number: '',
     origin_address: '',
     destination_address: '',
@@ -77,6 +83,9 @@ export default function NewShipmentPage() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           customer_id: form.customer_id,
+          customer_name: form.customer_name,
+          customer_email: form.customer_email,
+          customer_phone: form.customer_phone,
           reference_number: form.reference_number,
           origin_address: form.origin_address,
           destination_address: form.destination_address,
@@ -160,6 +169,49 @@ export default function NewShipmentPage() {
               className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
               placeholder="UUID"
               required
+            />
+          </div>
+
+          <div>
+            <label className="block text-slate-300 font-semibold mb-2" htmlFor="customer_name">
+              Customer name
+            </label>
+            <input
+              id="customer_name"
+              value={form.customer_name}
+              onChange={(e) => setForm((f) => ({ ...f, customer_name: e.target.value }))}
+              className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
+              placeholder="Full name"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-slate-300 font-semibold mb-2" htmlFor="customer_email">
+              Customer email
+            </label>
+            <input
+              id="customer_email"
+              type="email"
+              value={form.customer_email}
+              onChange={(e) => setForm((f) => ({ ...f, customer_email: e.target.value }))}
+              className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
+              placeholder="name@company.com"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-slate-300 font-semibold mb-2" htmlFor="customer_phone">
+              Customer phone
+            </label>
+            <input
+              id="customer_phone"
+              value={form.customer_phone}
+              onChange={(e) => setForm((f) => ({ ...f, customer_phone: e.target.value }))}
+              className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
+              placeholder="Optional"
+              inputMode="tel"
             />
           </div>
 

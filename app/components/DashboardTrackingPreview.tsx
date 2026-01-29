@@ -17,8 +17,17 @@ type TrackShipmentRow = {
   dest_lng: string | number | null;
   last_event_type: string | null;
   last_event_at: string | null;
+  last_event_notes: string | null;
   last_event_lat: string | number | null;
   last_event_lng: string | number | null;
+};
+
+type TrackShipmentEvent = {
+  event_type: string | null;
+  notes: string | null;
+  created_at: string;
+  latitude: string | number | null;
+  longitude: string | number | null;
 };
 
 export default function DashboardTrackingPreview() {
@@ -28,6 +37,7 @@ export default function DashboardTrackingPreview() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [row, setRow] = useState<TrackShipmentRow | null>(null);
+  const [events, setEvents] = useState<TrackShipmentEvent[]>([]);
 
   const hasRef = !!trimmed;
 
@@ -37,6 +47,7 @@ export default function DashboardTrackingPreview() {
     const run = async () => {
       if (!hasRef) {
         setRow(null);
+        setEvents([]);
         setError(null);
         setLoading(false);
         return;
@@ -51,21 +62,28 @@ export default function DashboardTrackingPreview() {
           headers: { 'content-type': 'application/json' },
         });
 
-        const json = (await res.json()) as { data: TrackShipmentRow | null; error: string | null };
+        const json = (await res.json()) as {
+          data: TrackShipmentRow | null;
+          events?: TrackShipmentEvent[];
+          error: string | null;
+        };
 
         if (!active) return;
 
         if (!res.ok) {
           setRow(null);
+          setEvents([]);
           setError(json.error || 'Tracking lookup failed');
           return;
         }
 
         setRow(json.data);
+        setEvents(json.events ?? []);
         setError(null);
       } catch (e: unknown) {
         if (!active) return;
         setRow(null);
+        setEvents([]);
         setError(e instanceof Error ? e.message : 'Tracking lookup failed');
       } finally {
         if (!active) return;
@@ -119,6 +137,16 @@ export default function DashboardTrackingPreview() {
         <TrackingMap
           origin={{ lat: row.origin_lat ?? null, lng: row.origin_lng ?? null, label: row.origin_address }}
           destination={{ lat: row.dest_lat ?? null, lng: row.dest_lng ?? null, label: row.destination_address }}
+          events={events.map((event) => ({
+            lat: event.latitude,
+            lng: event.longitude,
+            type: event.event_type ?? undefined,
+            at: event.created_at ?? undefined,
+            notes: event.notes ?? undefined,
+          }))}
+          status={row.status}
+          lastUpdateAt={row.last_event_at ?? null}
+          lastNotes={row.last_event_notes ?? null}
           lastEvent={{
             lat: row.last_event_lat ?? null,
             lng: row.last_event_lng ?? null,

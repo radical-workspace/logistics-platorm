@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, createContext, useContext } from 'react';
+import { useEffect, useState, createContext, useContext, useCallback } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/client/supabaseclient';
 import type { Profile } from '@/lib/shared/types';
@@ -65,23 +65,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const syncSessionToServer = async (session: { access_token?: string; refresh_token?: string } | null) => {
-    if (disableSessionSync) return;
-    if (!session?.access_token || !session?.refresh_token) return;
-    try {
-      await fetch('/api/auth/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          access_token: session.access_token,
-          refresh_token: session.refresh_token,
-        }),
-        credentials: 'include',
-      });
-    } catch {
-      // best-effort; ignore
-    }
-  };
+  const syncSessionToServer = useCallback(
+    async (session: { access_token?: string; refresh_token?: string } | null) => {
+      if (disableSessionSync) return;
+      if (!session?.access_token || !session?.refresh_token) return;
+      try {
+        await fetch('/api/auth/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          }),
+          credentials: 'include',
+        });
+      } catch {
+        // best-effort; ignore
+      }
+    },
+    [disableSessionSync],
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -153,7 +156,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [setStoreLoading, setStoreUser]);
+  }, [setStoreLoading, setStoreUser, syncSessionToServer]);
 
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -194,4 +197,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
