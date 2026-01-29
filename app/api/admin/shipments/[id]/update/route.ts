@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/server/supabase-route';
 import { supabaseAdmin } from '@/lib/server/supabase-admin';
+import { sendShipmentUpdateEmail } from '@/lib/server/email';
+import { publicEnv } from '@/lib/env/public';
 
 const allowedStatuses = new Set(['pending', 'picked_up', 'in_transit', 'delivered', 'cancelled']);
 
@@ -166,6 +168,49 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (eventErr || !event) {
     return NextResponse.json({ ok: false, error: eventErr?.message || 'Failed to create event' }, { status: 500, headers: response.headers });
+  }
+
+  const shipmentRow = shipment as {
+    reference_number?: string | null;
+    company_id?: string | null;
+    customer_id?: string | null;
+    customer_name?: string | null;
+    customer_email?: string | null;
+  };
+
+  const [{ data: company }, { data: customerProfile }] = await Promise.all([
+    shipmentRow.company_id
+      ? supabaseAdmin.from('companies').select('name').eq('id', shipmentRow.company_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    shipmentRow.customer_email
+      ? Promise.resolve({ data: null })
+      : shipmentRow.customer_id
+        ? supabaseAdmin.from('profiles').select('email').eq('id', shipmentRow.customer_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+  ]);
+
+  const to =
+    shipmentRow.customer_email ||
+    (customerProfile as { email?: string | null } | null)?.email ||
+    undefined;
+  const companyName = (company as { name?: string | null } | null)?.name || 'AFGHCO';
+  const appUrl = publicEnv.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+  const trackingUrl = `${appUrl}/tracking?ref=${encodeURIComponent(shipmentRow.reference_number || id)}`;
+
+  if (to && (statusToApply || locationLabel || latitude !== null || longitude !== null || notes)) {
+    const updateTitle = statusToApply ? 'Shipment status updated' : 'Shipment location updated';
+    const updateBody = statusToApply
+      ? `Hello ${shipmentRow.customer_name ?? 'there'}, your shipment is now ${statusToApply}.`
+      : combinedNotes;
+    await sendShipmentUpdateEmail({
+      to,
+      companyName,
+      referenceNumber: shipmentRow.reference_number || id,
+      status: statusToApply || currentStatus || 'in_transit',
+      updateTitle,
+      updateBody,
+      trackingUrl,
+    }).catch((err) => console.warn('sendShipmentUpdateEmail failed', err));
   }
 
   return NextResponse.json({ ok: true, shipment: updatedShipment, event }, { status: 200, headers: response.headers });

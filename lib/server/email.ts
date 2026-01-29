@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 import { serverEnv } from '@/lib/env/server';
 
@@ -66,17 +66,27 @@ function buildShipmentUpdateHtml(input: ShipmentUpdateEmailInput) {
 }
 
 export async function sendShipmentUpdateEmail(input: ShipmentUpdateEmailInput) {
-  const apiKey = serverEnv.RESEND_API_KEY || '';
-  if (!apiKey) {
+  const host = serverEnv.SMTP_HOST || '';
+  const port = Number(serverEnv.SMTP_PORT || 0);
+  const user = serverEnv.SMTP_USER || '';
+  const pass = serverEnv.SMTP_PASS || '';
+
+  if (!host || !port || !user || !pass) {
     // Do not crash local/dev if email isn't configured.
-    console.warn('RESEND_API_KEY missing; skipping email send');
+    console.warn('SMTP credentials missing; skipping email send');
     return { skipped: true as const };
   }
 
-  const from = serverEnv.EMAIL_FROM || 'AFGHCO <onboarding@resend.dev>';
-  const resend = new Resend(apiKey);
+  const from = serverEnv.EMAIL_FROM || user;
 
-  await resend.emails.send({
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+
+  await transporter.sendMail({
     from,
     to: input.to,
     subject: `${input.companyName}: ${input.updateTitle} (${input.referenceNumber})`,

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/server/supabase-route';
 import { supabaseAdmin } from '@/lib/server/supabase-admin';
 import { shipmentSchema } from '@/lib/shared/validators';
+import { sendShipmentUpdateEmail } from '@/lib/server/email';
+import { publicEnv } from '@/lib/env/public';
 
 const PAGE_SIZE = 20;
 const allowedStatuses = new Set(['pending', 'picked_up', 'in_transit', 'delivered', 'cancelled']);
@@ -231,6 +233,28 @@ export async function POST(request: NextRequest) {
 
   if (createErr || !created?.id) {
     return NextResponse.json({ error: createErr?.message || 'Create failed' }, { status: 400, headers: response.headers });
+  }
+
+  const { data: company } = await supabaseAdmin
+    .from('companies')
+    .select('name')
+    .eq('id', insertCompanyId)
+    .maybeSingle();
+
+  const companyName = (company as { name?: string | null } | null)?.name || 'AFGHCO';
+  const appUrl = publicEnv.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+  const trackingUrl = `${appUrl}/tracking?ref=${encodeURIComponent(reference_number)}`;
+
+  if (customer_email) {
+    await sendShipmentUpdateEmail({
+      to: customer_email,
+      companyName,
+      referenceNumber: reference_number,
+      status: 'pending',
+      updateTitle: 'Shipment created',
+      updateBody: `Shipment created for ${customer_name}.`,
+      trackingUrl,
+    }).catch((err) => console.warn('sendShipmentUpdateEmail failed', err));
   }
 
   return NextResponse.json({ id: created.id }, { status: 200, headers: response.headers });

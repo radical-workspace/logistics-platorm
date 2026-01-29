@@ -12,6 +12,8 @@ type ShipmentLookupRow = {
   status: string;
   company_id: string;
   customer_id: string;
+  customer_name: string | null;
+  customer_email: string | null;
 };
 
 type ProfileEmailRow = { email: string | null };
@@ -59,7 +61,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const { data: shipment, error: shipmentErr } = await supabaseAdmin
     .from('shipments')
-    .select('id,reference_number,status,company_id,customer_id')
+    .select('id,reference_number,status,company_id,customer_id,customer_name,customer_email')
     .eq('id', id)
     .single();
 
@@ -93,11 +95,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const shipmentRow = shipment as ShipmentLookupRow;
   const [{ data: customerProfile }, { data: company }] = await Promise.all([
-    supabaseAdmin.from('profiles').select('email').eq('id', shipmentRow.customer_id).single(),
+    shipmentRow.customer_email
+      ? Promise.resolve({ data: null })
+      : supabaseAdmin.from('profiles').select('email').eq('id', shipmentRow.customer_id).single(),
     supabaseAdmin.from('companies').select('name').eq('id', shipmentRow.company_id).single(),
   ]);
 
-  const to = (customerProfile as ProfileEmailRow | null)?.email ?? undefined;
+  const to =
+    shipmentRow.customer_email ||
+    (customerProfile as ProfileEmailRow | null)?.email ||
+    undefined;
   const companyName = (company as CompanyNameRow | null)?.name || 'AFGHCO';
 
   const appUrl = publicEnv.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
@@ -110,7 +117,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       referenceNumber: shipmentRow.reference_number,
       status,
       updateTitle: 'Shipment status updated',
-      updateBody: null,
+      updateBody: shipmentRow.customer_name ? `Hello ${shipmentRow.customer_name},` : null,
       trackingUrl,
     }).catch((err) => console.warn('sendShipmentUpdateEmail failed', err));
   }

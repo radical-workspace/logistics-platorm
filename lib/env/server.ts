@@ -37,7 +37,10 @@ if (process.env.NODE_ENV !== 'production') {
 const serverEnvSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
   SUPABASE_JWT_SECRET: z.string().min(1).optional(),
-  RESEND_API_KEY: z.string().min(1).optional(),
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: z.string().min(1).optional(),
+  SMTP_USER: z.string().min(1).optional(),
+  SMTP_PASS: z.string().min(1).optional(),
   EMAIL_FROM: z.string().min(1).optional(),
 });
 
@@ -48,7 +51,10 @@ export const serverEnv: ServerEnv & typeof publicEnv = {
   ...serverEnvSchema.parse({
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     SUPABASE_JWT_SECRET: process.env.SUPABASE_JWT_SECRET,
-    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_PORT: process.env.SMTP_PORT,
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASS: process.env.SMTP_PASS,
     EMAIL_FROM: process.env.EMAIL_FROM,
   }),
 };
