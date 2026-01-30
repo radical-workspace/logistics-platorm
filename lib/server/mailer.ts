@@ -565,14 +565,31 @@ async function sendWithTimeout(promise: Promise<unknown>, timeoutMs: number) {
 
 function assertMailerEnv() {
   const nodeEnv = serverEnv.NODE_ENV || process.env.NODE_ENV || 'development';
-  if (serverEnv.GMAIL_USER && serverEnv.GMAIL_APP_PASSWORD) return;
+  const hasGmail = !!(serverEnv.GMAIL_USER && serverEnv.GMAIL_APP_PASSWORD);
+  const hasSmtp = !!(serverEnv.SMTP_HOST && serverEnv.SMTP_USER && serverEnv.SMTP_PASS);
+  if (hasGmail || hasSmtp) return;
   if (nodeEnv === 'production') {
-    throw new Error('GMAIL_USER and GMAIL_APP_PASSWORD are required in production');
+    throw new Error('Email credentials are required in production');
   }
 }
 
 function getTransporter() {
   assertMailerEnv();
+  const hasSmtp = !!(serverEnv.SMTP_HOST && serverEnv.SMTP_USER && serverEnv.SMTP_PASS);
+  if (hasSmtp) {
+    const port = Number(serverEnv.SMTP_PORT || '465');
+    const secure = Number.isFinite(port) ? port === 465 : true;
+    return nodemailer.createTransport({
+      host: serverEnv.SMTP_HOST,
+      port: Number.isFinite(port) ? port : 465,
+      secure,
+      auth: {
+        user: serverEnv.SMTP_USER,
+        pass: serverEnv.SMTP_PASS,
+      },
+    });
+  }
+
   if (!serverEnv.GMAIL_USER || !serverEnv.GMAIL_APP_PASSWORD) return null;
 
   return nodemailer.createTransport({
@@ -597,7 +614,7 @@ export async function sendShipmentCreatedEmail(input: BaseEmailInput) {
 
   await sendWithTimeout(
     transporter.sendMail({
-      from: serverEnv.EMAIL_FROM || serverEnv.GMAIL_USER,
+      from: serverEnv.EMAIL_FROM || serverEnv.SMTP_USER || serverEnv.GMAIL_USER,
       to: input.to,
       subject: `Shipment created — ${input.referenceNumber}`,
       html,
@@ -623,7 +640,7 @@ export async function sendShipmentStatusUpdatedEmail(input: BaseEmailInput) {
 
   await sendWithTimeout(
     transporter.sendMail({
-      from: serverEnv.EMAIL_FROM || serverEnv.GMAIL_USER,
+      from: serverEnv.EMAIL_FROM || serverEnv.SMTP_USER || serverEnv.GMAIL_USER,
       to: input.to,
       subject: `Shipment update: ${input.statusLabel || 'Update'} — ${input.referenceNumber}`,
       html,
