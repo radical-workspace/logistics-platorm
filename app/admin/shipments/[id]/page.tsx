@@ -355,7 +355,9 @@ export default function AdminShipmentDetailPage() {
                   </div>
                   <div>
                     <div className="text-slate-400 text-sm">Customer</div>
-                    <div className="font-mono text-xs text-slate-300 break-all">{shipment.customer_id}</div>
+                    <div className="font-mono text-xs text-slate-300 break-all">
+                      {shipment.customer_id || '—'}
+                    </div>
                   </div>
                 </div>
               </div>

@@ -44,7 +44,7 @@ export interface Vehicle {
 export interface Shipment {
   id: string;
   company_id: string;
-  customer_id: string;
+  customer_id?: string | null;
   reference_number: string;
   status: ShipmentStatus;
   origin_address: string;

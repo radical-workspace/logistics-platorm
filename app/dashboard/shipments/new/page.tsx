@@ -9,7 +9,6 @@ import { apiFetch } from "@/lib/client/api";
 
 type FormState = {
   company_id: string;
-  customer_id: string;
   customer_name: string;
   customer_email: string;
   customer_phone: string;
@@ -42,7 +41,6 @@ export default function NewShipmentPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FormState>({
     company_id: profile?.company_id ?? "",
-    customer_id: "",
     customer_name: "",
     customer_email: "",
     customer_phone: "",
@@ -134,7 +132,6 @@ export default function NewShipmentPage() {
     const origin_address = form.origin_address.trim();
     const destination_address = form.destination_address.trim();
     const customer_phone = form.customer_phone.trim();
-    const customer_id = form.customer_id.trim();
 
     // ✅ UI gate (simple, correct)
     if (!isValidEmail(customer_email)) {
@@ -161,7 +158,6 @@ export default function NewShipmentPage() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          customer_id,
           customer_name,
           customer_email,
           customer_phone: customer_phone || null,

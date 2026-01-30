@@ -10,7 +10,7 @@ type ShipmentLookupRow = {
   reference_number: string;
   status: string;
   company_id: string;
-  customer_id: string;
+  customer_id: string | null;
   customer_name: string | null;
   customer_email: string | null;
   destination_address?: string | null;
@@ -95,9 +95,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const shipmentRow = shipment as ShipmentLookupRow;
   const [{ data: customerProfile }] = await Promise.all([
-    shipmentRow.customer_email
+    shipmentRow.customer_email || !shipmentRow.customer_id
       ? Promise.resolve({ data: null })
-      : supabaseAdmin.from('profiles').select('email').eq('id', shipmentRow.customer_id).single(),
+      : supabaseAdmin.from('profiles').select('email').eq('id', shipmentRow.customer_id).maybeSingle(),
   ]);
 
   const to =

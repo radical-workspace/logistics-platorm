@@ -9,7 +9,8 @@ type ShipmentLookupRow = {
   reference_number: string;
   status: string;
   company_id: string;
-  customer_id: string;
+  customer_id: string | null;
+  customer_email: string | null;
 };
 
 type ProfileEmailRow = { email: string | null };
@@ -47,7 +48,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const { data: shipment, error: shipmentErr } = await supabase
     .from('shipments')
-    .select('id,reference_number,status,company_id,customer_id')
+    .select('id,reference_number,status,company_id,customer_id,customer_email')
     .eq('id', id)
     .single();
 
@@ -74,11 +75,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const shipmentRow = shipment as ShipmentLookupRow;
   const [{ data: customerProfile }, { data: company }] = await Promise.all([
-    supabaseAdmin
-      .from('profiles')
-      .select('email')
-      .eq('id', shipmentRow.customer_id)
-      .single(),
+    shipmentRow.customer_email || !shipmentRow.customer_id
+      ? Promise.resolve({ data: null })
+      : supabaseAdmin
+          .from('profiles')
+          .select('email')
+          .eq('id', shipmentRow.customer_id)
+          .maybeSingle(),
     supabaseAdmin
       .from('companies')
       .select('name')
@@ -86,7 +89,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       .single(),
   ]);
 
-  const to = (customerProfile as ProfileEmailRow | null)?.email ?? undefined;
+  const to =
+    shipmentRow.customer_email ||
+    (customerProfile as ProfileEmailRow | null)?.email ||
+    undefined;
   const companyName = (company as CompanyNameRow | null)?.name || 'AFGHCO';
 
   const appUrl = publicEnv.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
