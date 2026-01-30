@@ -15,6 +15,9 @@ type TrackShipmentRow = {
   destination_address: string;
   dest_lat: string | number | null;
   dest_lng: string | number | null;
+  current_location_label: string | null;
+  current_lat: string | number | null;
+  current_lng: string | number | null;
   estimated_delivery: string | null;
   actual_delivery: string | null;
   last_event_type: string | null;
@@ -35,9 +38,10 @@ export default function TrackingLiveClient({
   const [streamError, setStreamError] = useState<string | null>(null);
 
   const lastUpdateLabel = useMemo(() => {
-    if (!row.last_event_type) return "Current location";
-    return `Current: ${row.last_event_type}`;
-  }, [row.last_event_type]);
+    if (row.last_event_type) return `Current: ${row.last_event_type}`;
+    if (row.current_location_label) return `Current: ${row.current_location_label}`;
+    return "Current location";
+  }, [row.last_event_type, row.current_location_label]);
 
   const fetchSnapshot = useCallback(async (ref: string) => {
     const res = await fetch(
@@ -175,8 +179,8 @@ export default function TrackingLiveClient({
             label: row.destination_address,
           }}
           lastEvent={{
-            lat: row.last_event_lat,
-            lng: row.last_event_lng,
+            lat: row.last_event_lat ?? row.current_lat,
+            lng: row.last_event_lng ?? row.current_lng,
             label: lastUpdateLabel,
           }}
         />

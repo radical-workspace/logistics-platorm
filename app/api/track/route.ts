@@ -13,6 +13,9 @@ type TrackShipmentRow = {
   destination_address: string;
   dest_lat: string | number | null;
   dest_lng: string | number | null;
+  current_location_label?: string | null;
+  current_lat?: string | number | null;
+  current_lng?: string | number | null;
   estimated_delivery: string | null;
   actual_delivery: string | null;
   last_event_type: string | null;

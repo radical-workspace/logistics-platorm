@@ -7,6 +7,7 @@ type TrackData = {
   last_event_at: string | null;
   last_event_lat: number | string | null;
   last_event_lng: number | string | null;
+  current_location_label?: string | null;
 };
 
 function titleCaseStatus(status: string | null) {
@@ -38,7 +39,10 @@ function progressFromStatus(status: string | null) {
 
 export default function TrackingProgressBox({ data }: { data: TrackData }) {
   const statusLabel = titleCaseStatus(data.status);
-  const currentLocation = data.last_event_notes?.trim() || "—";
+  const currentLocation =
+    data.last_event_notes?.trim() ||
+    data.current_location_label?.trim() ||
+    "—";
   const origin = data.origin_address?.trim() || "—";
   const destination = data.destination_address?.trim() || "—";
   const lastUpdate = formatWhen(data.last_event_at);

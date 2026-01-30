@@ -16,6 +16,9 @@ type TrackShipmentRow = {
   destination_address: string;
   dest_lat: string | number | null;
   dest_lng: string | number | null;
+  current_location_label?: string | null;
+  current_lat?: string | number | null;
+  current_lng?: string | number | null;
   last_event_type: string | null;
   last_event_at: string | null;
   last_event_notes: string | null;
@@ -150,8 +153,8 @@ export default function DashboardTrackingPreview() {
             lastUpdateAt={row.last_event_at ?? null}
             lastNotes={row.last_event_notes ?? null}
             lastEvent={{
-              lat: row.last_event_lat ?? null,
-              lng: row.last_event_lng ?? null,
+              lat: row.last_event_lat ?? row.current_lat ?? null,
+              lng: row.last_event_lng ?? row.current_lng ?? null,
               label: row.last_event_type ? `Last update: ${row.last_event_type}` : undefined,
             }}
           />
