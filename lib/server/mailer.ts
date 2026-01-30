@@ -128,6 +128,145 @@ function replaceTokens(template: string, tokens: TemplateTokens) {
   return output;
 }
 
+type MailPayload = {
+  from: string;
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+};
+
+function normalizeHeaderValue(value: string) {
+  return value.replace(/\r?\n/g, " ").trim();
+}
+
+function base64UrlEncode(input: string) {
+  return Buffer.from(input)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function buildRawEmail(payload: MailPayload) {
+  const boundary = `boundary_${Math.random().toString(16).slice(2)}`;
+  const lines = [
+    `From: ${normalizeHeaderValue(payload.from)}`,
+    `To: ${normalizeHeaderValue(payload.to)}`,
+    `Subject: ${normalizeHeaderValue(payload.subject)}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    "Content-Type: text/plain; charset=UTF-8",
+    "Content-Transfer-Encoding: 7bit",
+    "",
+    payload.text,
+    "",
+    `--${boundary}`,
+    "Content-Type: text/html; charset=UTF-8",
+    "Content-Transfer-Encoding: 7bit",
+    "",
+    payload.html,
+    "",
+    `--${boundary}--`,
+    "",
+  ];
+
+  return lines.join("\r\n");
+}
+
+let gmailAccessToken: { token: string; expiresAt: number } | null = null;
+
+function hasGmailApiConfig() {
+  return Boolean(
+    serverEnv.GMAIL_CLIENT_ID &&
+      serverEnv.GMAIL_CLIENT_SECRET &&
+      serverEnv.GMAIL_REFRESH_TOKEN
+  );
+}
+
+function resolveFromAddress() {
+  return (
+    serverEnv.GMAIL_SENDER ||
+    serverEnv.EMAIL_FROM ||
+    serverEnv.SMTP_USER ||
+    serverEnv.GMAIL_USER ||
+    ""
+  );
+}
+
+async function getGmailAccessToken() {
+  if (gmailAccessToken && Date.now() < gmailAccessToken.expiresAt - 60_000) {
+    return gmailAccessToken.token;
+  }
+
+  const clientId = serverEnv.GMAIL_CLIENT_ID;
+  const clientSecret = serverEnv.GMAIL_CLIENT_SECRET;
+  const refreshToken = serverEnv.GMAIL_REFRESH_TOKEN;
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error("Gmail API credentials are missing");
+  }
+
+  const body = new URLSearchParams({
+    client_id: clientId,
+    client_secret: clientSecret,
+    refresh_token: refreshToken,
+    grant_type: "refresh_token",
+  });
+
+  const resp = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+
+  const json = (await resp.json().catch(() => null)) as
+    | { access_token?: string; expires_in?: number; error?: string }
+    | null;
+
+  if (!resp.ok || !json?.access_token) {
+    throw new Error(
+      `Failed to refresh Gmail access token: ${json?.error || resp.status}`
+    );
+  }
+
+  const expiresIn = Number(json.expires_in || 0);
+  gmailAccessToken = {
+    token: json.access_token,
+    expiresAt: Date.now() + (Number.isFinite(expiresIn) ? expiresIn * 1000 : 0),
+  };
+
+  return json.access_token;
+}
+
+async function sendViaGmailApi(payload: MailPayload) {
+  const from = resolveFromAddress();
+  if (!from) {
+    throw new Error("Missing sender address for Gmail API");
+  }
+
+  const raw = base64UrlEncode(buildRawEmail({ ...payload, from }));
+  const token = await getGmailAccessToken();
+
+  const resp = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ raw }),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => "");
+    throw new Error(`Gmail API send failed: ${resp.status} ${text}`);
+  }
+
+  return { ok: true as const };
+}
+
 function trackingProgressBoxHtml() {
   return `
 <!-- Tracking Progress Box (ADD ONLY - do not change your existing layout) -->
@@ -567,7 +706,8 @@ function assertMailerEnv() {
   const nodeEnv = serverEnv.NODE_ENV || process.env.NODE_ENV || 'development';
   const hasGmail = !!(serverEnv.GMAIL_USER && serverEnv.GMAIL_APP_PASSWORD);
   const hasSmtp = !!(serverEnv.SMTP_HOST && serverEnv.SMTP_USER && serverEnv.SMTP_PASS);
-  if (hasGmail || hasSmtp) return;
+  const hasGmailApi = hasGmailApiConfig();
+  if (hasGmail || hasSmtp || hasGmailApi) return;
   if (nodeEnv === 'production') {
     throw new Error('Email credentials are required in production');
   }
@@ -612,19 +752,35 @@ export async function sendShipmentCreatedEmail(input: BaseEmailInput) {
     return { skipped: true as const };
   }
 
+  const { html, text } = buildTemplates(input, 'created');
+  const payload: MailPayload = {
+    from: resolveFromAddress(),
+    to: input.to,
+    subject: `Shipment created — ${input.referenceNumber}`,
+    html,
+    text,
+  };
+
+  if (hasGmailApiConfig()) {
+    try {
+      await sendViaGmailApi(payload);
+      return { skipped: false as const };
+    } catch (err) {
+      console.warn('sendShipmentCreatedEmail Gmail API failed', err);
+    }
+  }
+
   const transporter = getTransporter();
   if (!transporter) {
     console.warn('sendShipmentCreatedEmail: mailer not configured');
     return { skipped: true as const };
   }
 
-  const { html, text } = buildTemplates(input, 'created');
-
   await sendWithTimeout(
     transporter.sendMail({
-      from: serverEnv.EMAIL_FROM || serverEnv.SMTP_USER || serverEnv.GMAIL_USER,
+      from: payload.from || serverEnv.SMTP_USER || serverEnv.GMAIL_USER,
       to: input.to,
-      subject: `Shipment created — ${input.referenceNumber}`,
+      subject: payload.subject,
       html,
       text,
     }),
@@ -640,20 +796,36 @@ export async function sendShipmentStatusUpdatedEmail(input: BaseEmailInput) {
     return { skipped: true as const };
   }
 
+  const isDelivered = (input.statusLabel || '').toLowerCase().includes('delivered');
+  const { html, text } = buildTemplates(input, isDelivered ? 'delivered' : 'update');
+  const payload: MailPayload = {
+    from: resolveFromAddress(),
+    to: input.to,
+    subject: `Shipment update: ${input.statusLabel || 'Update'} — ${input.referenceNumber}`,
+    html,
+    text,
+  };
+
+  if (hasGmailApiConfig()) {
+    try {
+      await sendViaGmailApi(payload);
+      return { skipped: false as const };
+    } catch (err) {
+      console.warn('sendShipmentStatusUpdatedEmail Gmail API failed', err);
+    }
+  }
+
   const transporter = getTransporter();
   if (!transporter) {
     console.warn('sendShipmentStatusUpdatedEmail: mailer not configured');
     return { skipped: true as const };
   }
 
-  const isDelivered = (input.statusLabel || '').toLowerCase().includes('delivered');
-  const { html, text } = buildTemplates(input, isDelivered ? 'delivered' : 'update');
-
   await sendWithTimeout(
     transporter.sendMail({
-      from: serverEnv.EMAIL_FROM || serverEnv.SMTP_USER || serverEnv.GMAIL_USER,
+      from: payload.from || serverEnv.SMTP_USER || serverEnv.GMAIL_USER,
       to: input.to,
-      subject: `Shipment update: ${input.statusLabel || 'Update'} — ${input.referenceNumber}`,
+      subject: payload.subject,
       html,
       text,
     }),
