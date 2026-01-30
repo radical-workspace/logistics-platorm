@@ -15,6 +15,10 @@ type FormState = {
   reference_number: string;
   origin_address: string;
   destination_address: string;
+  origin_latitude: string;
+  origin_longitude: string;
+  destination_latitude: string;
+  destination_longitude: string;
   weight_kg: string;
   description: string;
   estimated_delivery: string;
@@ -47,6 +51,10 @@ export default function NewShipmentPage() {
     reference_number: "",
     origin_address: "",
     destination_address: "",
+    origin_latitude: "",
+    origin_longitude: "",
+    destination_latitude: "",
+    destination_longitude: "",
     weight_kg: "",
     description: "",
     estimated_delivery: "",
@@ -105,6 +113,12 @@ export default function NewShipmentPage() {
     return Number.isFinite(value) ? value : undefined;
   }, [form.weight_kg]);
 
+  const parseCoordinate = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    return Number(trimmed);
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -132,6 +146,10 @@ export default function NewShipmentPage() {
     const origin_address = form.origin_address.trim();
     const destination_address = form.destination_address.trim();
     const customer_phone = form.customer_phone.trim();
+    const origin_latitude = parseCoordinate(form.origin_latitude);
+    const origin_longitude = parseCoordinate(form.origin_longitude);
+    const destination_latitude = parseCoordinate(form.destination_latitude);
+    const destination_longitude = parseCoordinate(form.destination_longitude);
 
     // ✅ UI gate (simple, correct)
     if (!isValidEmail(customer_email)) {
@@ -148,6 +166,10 @@ export default function NewShipmentPage() {
         description: form.description?.trim() || undefined,
         // keep as entered; schema decides if valid
         estimated_delivery: form.estimated_delivery || undefined,
+        origin_latitude,
+        origin_longitude,
+        destination_latitude,
+        destination_longitude,
       });
 
       const estimatedDeliveryIso = parsed.estimated_delivery
@@ -165,6 +187,10 @@ export default function NewShipmentPage() {
           reference_number,
           origin_address,
           destination_address,
+          origin_latitude,
+          origin_longitude,
+          destination_latitude,
+          destination_longitude,
           weight_kg: parsedWeight ?? null,
           description: form.description?.trim() || null,
           estimated_delivery: estimatedDeliveryIso,
@@ -365,6 +391,44 @@ export default function NewShipmentPage() {
               required
             />
           </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label
+                className="block text-slate-300 font-semibold mb-2"
+                htmlFor="origin_latitude"
+              >
+                Origin latitude
+              </label>
+              <input
+                id="origin_latitude"
+                value={form.origin_latitude}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, origin_latitude: e.target.value }))
+                }
+                className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
+                inputMode="decimal"
+                placeholder="e.g. 40.7128"
+              />
+            </div>
+            <div>
+              <label
+                className="block text-slate-300 font-semibold mb-2"
+                htmlFor="origin_longitude"
+              >
+                Origin longitude
+              </label>
+              <input
+                id="origin_longitude"
+                value={form.origin_longitude}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, origin_longitude: e.target.value }))
+                }
+                className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
+                inputMode="decimal"
+                placeholder="e.g. -74.0060"
+              />
+            </div>
+          </div>
 
           <div>
             <label
@@ -382,6 +446,44 @@ export default function NewShipmentPage() {
               className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
               required
             />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label
+                className="block text-slate-300 font-semibold mb-2"
+                htmlFor="destination_latitude"
+              >
+                Destination latitude
+              </label>
+              <input
+                id="destination_latitude"
+                value={form.destination_latitude}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, destination_latitude: e.target.value }))
+                }
+                className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
+                inputMode="decimal"
+                placeholder="e.g. 34.0522"
+              />
+            </div>
+            <div>
+              <label
+                className="block text-slate-300 font-semibold mb-2"
+                htmlFor="destination_longitude"
+              >
+                Destination longitude
+              </label>
+              <input
+                id="destination_longitude"
+                value={form.destination_longitude}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, destination_longitude: e.target.value }))
+                }
+                className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
+                inputMode="decimal"
+                placeholder="e.g. -118.2437"
+              />
+            </div>
           </div>
 
           <div>

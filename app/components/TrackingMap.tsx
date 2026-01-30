@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl, {
   type GeoJSONSource,
   type LngLatBoundsLike,
@@ -38,6 +38,7 @@ export default function TrackingMap({
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const [mapReady, setMapReady] = useState(false);
 
   const markersRef = useRef<{
     origin?: MapLibreMarker;
@@ -217,6 +218,8 @@ export default function TrackingMap({
       if (bounds) {
         map.fitBounds(bounds, { padding: 40, duration: 0 });
       }
+
+      setMapReady(true);
     });
 
     mapRef.current = map;
@@ -228,6 +231,7 @@ export default function TrackingMap({
       }
       map.remove();
       mapRef.current = null;
+      setMapReady(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -235,7 +239,7 @@ export default function TrackingMap({
   // Update route + markers whenever data changes
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapReady) return;
 
     // Update route geojson
     const src = map.getSource("route") as GeoJSONSource | undefined;
@@ -337,6 +341,7 @@ export default function TrackingMap({
       map.easeTo({ center: [...lastEventCoord] as [number, number], zoom: 10, duration: 600 });
     }
   }, [
+    mapReady,
     routeGeoJson,
     bounds,
     normalized.o,

@@ -9,10 +9,14 @@ const allowedStatuses = new Set(['pending', 'picked_up', 'in_transit', 'delivere
 type AdminShipmentUpdateBody = {
   status?: unknown;
   current_location_label?: unknown;
+  current_latitude?: unknown;
+  current_longitude?: unknown;
   current_lat?: unknown;
   current_lng?: unknown;
   lat?: unknown;
   lng?: unknown;
+  latitude?: unknown;
+  longitude?: unknown;
   assigned_dispatcher_id?: unknown;
   notes?: unknown;
 };
@@ -24,6 +28,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const body = (await request.json().catch(() => ({}))) as AdminShipmentUpdateBody;
 
+  if (body.lat == null && body.latitude != null) body.lat = body.latitude;
+  if (body.lng == null && body.longitude != null) body.lng = body.longitude;
+  if (body.lat == null && body.current_latitude != null) body.lat = body.current_latitude;
+  if (body.lng == null && body.current_longitude != null) body.lng = body.current_longitude;
   if (body.lat == null && body.current_lat != null) body.lat = body.current_lat;
   if (body.lng == null && body.current_lng != null) body.lng = body.current_lng;
 

@@ -125,6 +125,14 @@ export async function POST(request: NextRequest) {
         reference_number?: unknown;
         origin_address?: unknown;
         destination_address?: unknown;
+        origin_latitude?: unknown;
+        origin_longitude?: unknown;
+        destination_latitude?: unknown;
+        destination_longitude?: unknown;
+        origin_lat?: unknown;
+        origin_lng?: unknown;
+        dest_lat?: unknown;
+        dest_lng?: unknown;
         weight_kg?: unknown;
         description?: unknown;
         estimated_delivery?: unknown;
@@ -171,6 +179,35 @@ export async function POST(request: NextRequest) {
   const destination_address = String(body?.destination_address ?? '').trim();
   const description = String(body?.description ?? '').trim().slice(0, 500);
   const estimated_delivery = body?.estimated_delivery ?? undefined;
+  const originLatRaw = body?.origin_latitude ?? body?.origin_lat;
+  const originLngRaw = body?.origin_longitude ?? body?.origin_lng;
+  const destinationLatRaw = body?.destination_latitude ?? body?.dest_lat;
+  const destinationLngRaw = body?.destination_longitude ?? body?.dest_lng;
+
+  const origin_latitude =
+    originLatRaw === '' || originLatRaw == null
+      ? null
+      : typeof originLatRaw === 'number'
+        ? originLatRaw
+        : Number(String(originLatRaw).trim());
+  const origin_longitude =
+    originLngRaw === '' || originLngRaw == null
+      ? null
+      : typeof originLngRaw === 'number'
+        ? originLngRaw
+        : Number(String(originLngRaw).trim());
+  const destination_latitude =
+    destinationLatRaw === '' || destinationLatRaw == null
+      ? null
+      : typeof destinationLatRaw === 'number'
+        ? destinationLatRaw
+        : Number(String(destinationLatRaw).trim());
+  const destination_longitude =
+    destinationLngRaw === '' || destinationLngRaw == null
+      ? null
+      : typeof destinationLngRaw === 'number'
+        ? destinationLngRaw
+        : Number(String(destinationLngRaw).trim());
 
   const weightRaw = body?.weight_kg;
   const weight_kg =
@@ -194,6 +231,10 @@ export async function POST(request: NextRequest) {
       weight_kg: weight_kg ?? 1,
       description: description || undefined,
       estimated_delivery,
+      origin_latitude,
+      origin_longitude,
+      destination_latitude,
+      destination_longitude,
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Invalid shipment';
@@ -249,6 +290,10 @@ export async function POST(request: NextRequest) {
       reference_number,
       origin_address,
       destination_address,
+      origin_lat: origin_latitude,
+      origin_lng: origin_longitude,
+      dest_lat: destination_latitude,
+      dest_lng: destination_longitude,
       weight_kg: Number.isFinite(weight_kg as number) ? (weight_kg as number) : null,
       description: description || null,
       estimated_delivery: parsedShipment.estimated_delivery ? parsedShipment.estimated_delivery.toISOString() : null,

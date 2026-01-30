@@ -39,8 +39,8 @@ export default function AdminShipmentDetailPage() {
 
   const [status, setStatus] = useState<ShipmentStatus>('pending');
   const [locationLabel, setLocationLabel] = useState('');
-  const [lat, setLat] = useState('');
-  const [lng, setLng] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
   const [notes, setNotes] = useState('');
   const [savingUpdate, setSavingUpdate] = useState(false);
 
@@ -150,8 +150,8 @@ export default function AdminShipmentDetailPage() {
 
     setSavingUpdate(true);
     try {
-      const current_lat = lat.trim() ? Number(lat) : null;
-      const current_lng = lng.trim() ? Number(lng) : null;
+      const current_latitude = latitude.trim() ? Number(latitude) : null;
+      const current_longitude = longitude.trim() ? Number(longitude) : null;
 
       const res = await apiFetch(`/api/admin/shipments/${encodeURIComponent(shipmentId)}/update`, {
         method: 'POST',
@@ -159,8 +159,8 @@ export default function AdminShipmentDetailPage() {
         body: JSON.stringify({
           status,
           current_location_label: locationLabel.trim() || null,
-          current_lat,
-          current_lng,
+          current_latitude,
+          current_longitude,
           notes: notes.trim() || null,
         }),
       });
@@ -428,26 +428,26 @@ export default function AdminShipmentDetailPage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-2" htmlFor="current_lat">
-                        Lat
+                      <label className="block text-slate-300 font-semibold mb-2" htmlFor="current_latitude">
+                        Latitude
                       </label>
                       <input
-                        id="current_lat"
-                        value={lat}
-                        onChange={(e) => setLat(e.target.value)}
+                        id="current_latitude"
+                        value={latitude}
+                        onChange={(e) => setLatitude(e.target.value)}
                         className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
                         inputMode="decimal"
                         placeholder="6.6018"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-2" htmlFor="current_lng">
-                        Lng
+                      <label className="block text-slate-300 font-semibold mb-2" htmlFor="current_longitude">
+                        Longitude
                       </label>
                       <input
-                        id="current_lng"
-                        value={lng}
-                        onChange={(e) => setLng(e.target.value)}
+                        id="current_longitude"
+                        value={longitude}
+                        onChange={(e) => setLongitude(e.target.value)}
                         className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
                         inputMode="decimal"
                         placeholder="3.3515"
