@@ -1,0 +1,29 @@
+
+> logistics-platform@0.1.0 dev
+> next dev --turbo
+
+ ⚠ Port 3000 is in use by process 15680, using available port 3002 instead.
+   ▲ Next.js 15.5.9 (Turbopack)
+   - Local:        http://localhost:3002
+   - Network:      http://10.166.122.7:3002
+   - Environments: .env.local
+   - Experiments (use with caution):
+     · clientTraceMetadata
+
+ ✓ Starting...
+ ○ Compiling middleware ...
+ ✓ Compiled middleware in 2.3s
+ ✓ Ready in 9.8s
+ ○ Compiling / ...
+ ✓ Compiled / in 23.9s
+ GET / 200 in 6500ms
+ ○ Compiling /api/admin/companies ...
+ ✓ Compiled /api/admin/companies in 1804ms
+[auth cookies] { path: '/api/admin/companies', cookies: [] }
+ GET /api/admin/companies 200 in 4129ms
+ ○ Compiling /api/dashboard/shipments ...
+ ✓ Compiled /api/dashboard/shipments in 819ms
+[auth cookies] { path: '/api/dashboard/shipments', cookies: [] }
+ POST /api/dashboard/shipments 200 in 2210ms
+
+e:\logistics\logistics-platorm>

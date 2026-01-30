@@ -577,6 +577,11 @@ function getTransporter() {
   assertMailerEnv();
   const hasSmtp = !!(serverEnv.SMTP_HOST && serverEnv.SMTP_USER && serverEnv.SMTP_PASS);
   if (hasSmtp) {
+    const rawPass = serverEnv.SMTP_PASS || '';
+    const smtpPass =
+      /gmail\.com$/i.test(serverEnv.SMTP_HOST || '') || /@gmail\.com$/i.test(serverEnv.SMTP_USER || '')
+        ? rawPass.replace(/\s+/g, '')
+        : rawPass;
     const port = Number(serverEnv.SMTP_PORT || '465');
     const secure = Number.isFinite(port) ? port === 465 : true;
     return nodemailer.createTransport({
@@ -585,7 +590,7 @@ function getTransporter() {
       secure,
       auth: {
         user: serverEnv.SMTP_USER,
-        pass: serverEnv.SMTP_PASS,
+        pass: smtpPass,
       },
     });
   }
@@ -608,7 +613,10 @@ export async function sendShipmentCreatedEmail(input: BaseEmailInput) {
   }
 
   const transporter = getTransporter();
-  if (!transporter) return { skipped: true as const };
+  if (!transporter) {
+    console.warn('sendShipmentCreatedEmail: mailer not configured');
+    return { skipped: true as const };
+  }
 
   const { html, text } = buildTemplates(input, 'created');
 
@@ -633,7 +641,10 @@ export async function sendShipmentStatusUpdatedEmail(input: BaseEmailInput) {
   }
 
   const transporter = getTransporter();
-  if (!transporter) return { skipped: true as const };
+  if (!transporter) {
+    console.warn('sendShipmentStatusUpdatedEmail: mailer not configured');
+    return { skipped: true as const };
+  }
 
   const isDelivered = (input.statusLabel || '').toLowerCase().includes('delivered');
   const { html, text } = buildTemplates(input, isDelivered ? 'delivered' : 'update');
