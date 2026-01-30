@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
   const origin_address = String(body?.origin_address ?? '').trim();
   const destination_address = String(body?.destination_address ?? '').trim();
   const description = String(body?.description ?? '').trim().slice(0, 500);
-  const estimated_delivery = String(body?.estimated_delivery ?? '').trim();
+  const estimated_delivery = body?.estimated_delivery ?? undefined;
 
   const weightRaw = body?.weight_kg;
   const weight_kg =
@@ -182,13 +182,20 @@ export async function POST(request: NextRequest) {
         ? weightRaw
         : Number(String(weightRaw));
 
+  let parsedShipment: {
+    origin_address: string;
+    destination_address: string;
+    weight_kg: number;
+    description?: string;
+    estimated_delivery?: Date | null;
+  };
   try {
-    shipmentSchema.parse({
+    parsedShipment = shipmentSchema.parse({
       origin_address,
       destination_address,
       weight_kg: weight_kg ?? 1,
       description: description || undefined,
-      estimated_delivery: estimated_delivery || undefined,
+      estimated_delivery,
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Invalid shipment';
@@ -248,7 +255,7 @@ export async function POST(request: NextRequest) {
       destination_address,
       weight_kg: Number.isFinite(weight_kg as number) ? (weight_kg as number) : null,
       description: description || null,
-      estimated_delivery: estimated_delivery ? new Date(estimated_delivery).toISOString() : null,
+      estimated_delivery: parsedShipment.estimated_delivery ? parsedShipment.estimated_delivery.toISOString() : null,
       status: 'pending',
     })
     .select('id')
@@ -265,7 +272,7 @@ export async function POST(request: NextRequest) {
       customerName: customer_name,
       originAddress: origin_address,
       destinationAddress: destination_address,
-      estimatedDelivery: estimated_delivery || '—',
+      estimatedDelivery: parsedShipment.estimated_delivery ? parsedShipment.estimated_delivery.toISOString() : '—',
       statusLabel: 'Pending',
       locationLabel: 'Shipment created',
       eventTime: new Date().toISOString(),

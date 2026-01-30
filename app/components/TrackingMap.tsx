@@ -87,7 +87,7 @@ export default function TrackingMap({
 
   const lastEventCoord = useMemo(() => {
     if (eventCoords.length > 0) return eventCoords[eventCoords.length - 1];
-    return normalized.e;
+    return normalized.e ? ([normalized.e[0], normalized.e[1]] as [number, number]) : null;
   }, [eventCoords, normalized.e]);
 
   const routeGeoJson = useMemo(() => {
@@ -149,7 +149,7 @@ export default function TrackingMap({
       [maxLng + padLng, maxLat + padLat],
     ];
     return b;
-  }, [normalized.o, normalized.d, eventCoords, normalized.e]);
+  }, [normalized.o, normalized.d, eventCoords]);
 
   // Create map ONCE
   useEffect(() => {
@@ -298,13 +298,13 @@ export default function TrackingMap({
 
     upsertMarker(
       "origin",
-      normalized.o,
+      normalized.o ? [...normalized.o] as [number, number] : null,
       origin?.label || "Origin",
       "marker-origin",
     );
     upsertMarker(
       "destination",
-      normalized.d,
+      normalized.d ? [...normalized.d] as [number, number] : null,
       destination?.label || "Destination",
       "marker-destination",
     );
@@ -334,7 +334,7 @@ export default function TrackingMap({
     if (bounds) {
       map.fitBounds(bounds, { padding: 50, duration: 600 });
     } else if (lastEventCoord) {
-      map.easeTo({ center: lastEventCoord, zoom: 10, duration: 600 });
+      map.easeTo({ center: [...lastEventCoord] as [number, number], zoom: 10, duration: 600 });
     }
   }, [
     routeGeoJson,
@@ -352,7 +352,7 @@ export default function TrackingMap({
     <div className="mt-6">
       <div className="text-slate-400 text-sm mb-2">Map</div>
       <div className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
-        <div ref={containerRef} style={{ width: "100%", height: 320 }} />
+        <div ref={containerRef} className="w-full h-80" />
       </div>
 
       <div className="mt-2 text-xs text-slate-500">

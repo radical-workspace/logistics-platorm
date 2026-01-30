@@ -129,9 +129,9 @@ export default function HomeTrackingPreview() {
           at: event.created_at ?? undefined,
           notes: event.notes ?? undefined,
         }))}
-        status={row?.status ?? null}
-        lastUpdateAt={row?.last_event_at ?? null}
-        lastNotes={row?.last_event_notes ?? null}
+        status={row?.status ?? undefined}
+        lastUpdateAt={row?.last_event_at ?? undefined}
+        lastNotes={row?.last_event_notes ?? undefined}
         lastEvent={{
           lat: row?.last_event_lat ?? null,
           lng: row?.last_event_lng ?? null,

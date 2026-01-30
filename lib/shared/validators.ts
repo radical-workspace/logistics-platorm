@@ -16,7 +16,7 @@ export const shipmentSchema = z.object({
   destination_address: z.string().min(1, 'Destination address required'),
   weight_kg: z.number().positive('Weight must be positive'),
   description: z.string().optional(),
-  estimated_delivery: z.string().datetime().optional(),
+  estimated_delivery: z.coerce.date().nullable().optional(),
 });
 
 export const passwordResetSchema = z.object({

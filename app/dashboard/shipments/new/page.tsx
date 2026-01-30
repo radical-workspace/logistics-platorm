@@ -110,13 +110,14 @@ export default function NewShipmentPage() {
 
     setSaving(true);
     try {
-      shipmentSchema.parse({
+      const parsed = shipmentSchema.parse({
         origin_address: form.origin_address,
         destination_address: form.destination_address,
         weight_kg: parsedWeight ?? 1,
         description: form.description || undefined,
         estimated_delivery: form.estimated_delivery || undefined,
       });
+      const estimatedDeliveryIso = parsed.estimated_delivery ? parsed.estimated_delivery.toISOString() : null;
 
       const res = await apiFetch('/api/dashboard/shipments', {
         method: 'POST',
@@ -132,7 +133,7 @@ export default function NewShipmentPage() {
           destination_address: form.destination_address,
           weight_kg: parsedWeight ?? null,
           description: form.description || null,
-          estimated_delivery: form.estimated_delivery || null,
+          estimated_delivery: estimatedDeliveryIso,
         }),
       });
 

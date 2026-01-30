@@ -46,8 +46,11 @@ export default function TrackingProgressBox({ data }: { data: TrackData }) {
   const { pct, caption } = progressFromStatus(data.status);
   const safePct = clamp(pct, 0, 100);
 
+  // Set CSS variable for progress width
+  const progressStyle = { '--progress-width': `${safePct}%` } as React.CSSProperties;
+
   return (
-    <section className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+    <section className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/40 p-4" style={progressStyle}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-black tracking-wide text-slate-100">
@@ -66,14 +69,18 @@ export default function TrackingProgressBox({ data }: { data: TrackData }) {
       <div className="mt-4 grid gap-2 text-sm">
         <div className="flex items-center justify-between gap-3">
           <span className="text-slate-400">Current location</span>
-          <span className="font-semibold text-slate-100">{currentLocation}</span>
+          <span className="font-semibold text-slate-100">
+            {currentLocation}
+          </span>
         </div>
 
         <div className="flex items-center justify-between gap-3">
           <span className="text-slate-400">Route</span>
           <span className="text-slate-100">
             {origin} <span className="text-slate-500">→</span>{" "}
-            <span className="font-extrabold text-blue-400">{currentLocation}</span>{" "}
+            <span className="font-extrabold text-blue-400">
+              {currentLocation}
+            </span>{" "}
             <span className="text-slate-500">→</span> {destination}
           </span>
         </div>
@@ -88,7 +95,13 @@ export default function TrackingProgressBox({ data }: { data: TrackData }) {
         <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
           <div
             className="h-2 rounded-full bg-blue-500"
-            style={{ width: `${safePct}%` }}
+            style={{ width: `var(--progress-width, 0%)` }}
+            role="progressbar"
+            aria-label="Shipment progress"
+            aria-valuenow={safePct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            data-progress
           />
         </div>
         <div className="mt-2 text-xs text-slate-400">{caption}</div>
