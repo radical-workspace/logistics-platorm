@@ -118,7 +118,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as
     | {
-        customer_id?: unknown;
         customer_name?: unknown;
         customer_email?: unknown;
         customer_phone?: unknown;
@@ -163,7 +162,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers: response.headers });
   }
 
-  const customer_id = String(body?.customer_id ?? '').trim();
   const customer_name = String(body?.customer_name ?? '').trim();
   const customer_email = String(body?.customer_email ?? '').trim();
   const customer_phone = String(body?.customer_phone ?? '').trim();
@@ -203,7 +201,6 @@ export async function POST(request: NextRequest) {
   }
 
   if (
-    !customer_id ||
     !customer_name ||
     !customer_email ||
     !reference_number ||
@@ -246,7 +243,6 @@ export async function POST(request: NextRequest) {
     .from('shipments')
     .insert({
       company_id: insertCompanyId,
-      customer_id,
       customer_name,
       customer_email,
       customer_phone: customer_phone || null,

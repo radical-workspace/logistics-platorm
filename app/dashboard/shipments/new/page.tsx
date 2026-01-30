@@ -274,25 +274,6 @@ export default function NewShipmentPage() {
           <div>
             <label
               className="block text-slate-300 font-semibold mb-2"
-              htmlFor="customer_id"
-            >
-              Customer ID
-            </label>
-            <input
-              id="customer_id"
-              value={form.customer_id}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, customer_id: e.target.value }))
-              }
-              className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700"
-              placeholder="UUID"
-              required
-            />
-          </div>
-
-          <div>
-            <label
-              className="block text-slate-300 font-semibold mb-2"
               htmlFor="customer_name"
             >
               Customer name
