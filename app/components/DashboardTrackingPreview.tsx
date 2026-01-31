@@ -140,6 +140,7 @@ export default function DashboardTrackingPreview() {
       {row ? (
         <div className="mt-4 grid gap-4">
           <TrackingMap
+            reference={trimmed}
             origin={{ lat: row.origin_lat ?? null, lng: row.origin_lng ?? null, label: row.origin_address }}
             destination={{ lat: row.dest_lat ?? null, lng: row.dest_lng ?? null, label: row.destination_address }}
             events={events.map((event) => ({

@@ -158,13 +158,36 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const event_type = statusToApply ?? (dispatcherToApply !== null ? 'dispatcher_assignment' : 'location_update');
 
+  let eventLatitude = latitude;
+  let eventLongitude = longitude;
+
+  if ((eventLatitude === null || eventLongitude === null) && locationLabel) {
+    const { data: lastWithCoords } = await supabaseAdmin
+      .from('shipment_events')
+      .select('latitude,longitude')
+      .eq('shipment_id', id)
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const fallbackLat = lastWithCoords?.latitude ?? (shipment as { current_lat?: number | null }).current_lat ?? null;
+    const fallbackLng = lastWithCoords?.longitude ?? (shipment as { current_lng?: number | null }).current_lng ?? null;
+
+    if (fallbackLat !== null && fallbackLng !== null) {
+      eventLatitude = fallbackLat;
+      eventLongitude = fallbackLng;
+    }
+  }
+
   const { data: event, error: eventErr } = await supabaseAdmin
     .from('shipment_events')
     .insert({
       shipment_id: id,
       event_type,
-      latitude,
-      longitude,
+      latitude: eventLatitude,
+      longitude: eventLongitude,
       notes:
         combinedNotes ??
         (dispatcherToApply !== null ? `Assigned dispatcher=${dispatcherToApply || 'none'}` : null),

@@ -36,6 +36,7 @@ export default function TrackingLiveClient({
 }) {
   const [row, setRow] = useState<TrackShipmentRow>(initialRow);
   const [streamError, setStreamError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   const lastUpdateLabel = useMemo(() => {
     if (row.last_event_type) return `Current: ${row.last_event_type}`;
@@ -117,9 +118,41 @@ export default function TrackingLiveClient({
           <div className="text-slate-400 text-sm">Reference</div>
           <div className="text-xl font-bold">{row.reference_number}</div>
         </div>
-        <div className="text-right">
-          <div className="text-slate-400 text-sm">Status</div>
-          <div className="text-lg font-semibold">{row.status}</div>
+        <div className="text-right space-y-2">
+          <div>
+            <div className="text-slate-400 text-sm">Status</div>
+            <div className="text-lg font-semibold">{row.status}</div>
+          </div>
+          <button
+            type="button"
+            disabled={downloading}
+            onClick={async () => {
+              try {
+                setDownloading(true);
+                const node = document.querySelector(
+                  "[data-tracking-map=\"true\"]",
+                ) as HTMLElement | null;
+                if (!node) throw new Error("Map not ready");
+                const html2canvas = (await import("html2canvas")).default;
+                const canvas = await html2canvas(node, {
+                  backgroundColor: "#0f172a",
+                  useCORS: true,
+                  scale: 2,
+                });
+                const link = document.createElement("a");
+                link.download = `tracking-${row.reference_number}.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+              } catch (err) {
+                console.error(err);
+              } finally {
+                setDownloading(false);
+              }
+            }}
+            className="bg-slate-800 hover:bg-slate-700 transition px-3 py-2 rounded text-xs font-semibold"
+          >
+            {downloading ? "Preparing…" : "Download tracking map"}
+          </button>
         </div>
       </div>
 
@@ -168,6 +201,7 @@ export default function TrackingLiveClient({
         </div>
 
         <TrackingMap
+          reference={reference}
           origin={{
             lat: row.origin_lat,
             lng: row.origin_lng,

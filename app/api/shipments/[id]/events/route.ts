@@ -19,9 +19,25 @@ type CompanyNameRow = { name: string | null };
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const body = (await request.json().catch(() => null)) as { event_type?: string; notes?: string | null } | null;
+  const body = (await request.json().catch(() => null)) as {
+    event_type?: string;
+    notes?: string | null;
+    latitude?: unknown;
+    longitude?: unknown;
+    lat?: unknown;
+    lng?: unknown;
+  } | null;
   const eventType = (body?.event_type || '').trim();
   const notes = (body?.notes || '').trim();
+  const rawLat = body?.latitude ?? body?.lat ?? null;
+  const rawLng = body?.longitude ?? body?.lng ?? null;
+  let latitude =
+    rawLat === '' || rawLat == null ? null : Number(String(rawLat));
+  let longitude =
+    rawLng === '' || rawLng == null ? null : Number(String(rawLng));
+
+  if (latitude !== null && Number.isNaN(latitude)) latitude = null;
+  if (longitude !== null && Number.isNaN(longitude)) longitude = null;
 
   if (!eventType) {
     return NextResponse.json({ error: 'event_type is required' }, { status: 400 });
@@ -48,10 +64,29 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'Shipment not found' }, { status: 404 });
   }
 
+  if ((latitude === null || longitude === null) && notes) {
+    const { data: lastWithCoords } = await supabaseAdmin
+      .from('shipment_events')
+      .select('latitude,longitude')
+      .eq('shipment_id', id)
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (lastWithCoords?.latitude != null && lastWithCoords?.longitude != null) {
+      latitude = Number(lastWithCoords.latitude);
+      longitude = Number(lastWithCoords.longitude);
+    }
+  }
+
   const { error: insertErr } = await supabase.from('shipment_events').insert({
     shipment_id: id,
     event_type: eventType,
     notes: notes || null,
+    latitude,
+    longitude,
   });
 
   if (insertErr) {

@@ -115,6 +115,7 @@ export default function HomeTrackingPreview() {
       <p className="text-slate-300">{statusLine}</p>
 
       <TrackingMap
+        reference={ref}
         origin={{
           lat: row?.origin_lat ?? null,
           lng: row?.origin_lng ?? null,

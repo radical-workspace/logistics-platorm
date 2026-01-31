@@ -9,7 +9,7 @@ import {
   TileLayer,
 } from "react-leaflet";
 import L from "leaflet";
-import type { TrackingMapProps, LatLngLike } from "./TrackingMap.types";
+import type { TrackingMapProps, LatLngLike, PointInput } from "./TrackingMap.types";
 import "leaflet/dist/leaflet.css";
 
 const asNumber = (v: LatLngLike): number | null => {
@@ -63,6 +63,7 @@ const createLabelIcon = (label: string, className: string) =>
   });
 
 export default function TrackingMap({
+  reference,
   origin,
   destination,
   lastEvent,
@@ -70,11 +71,11 @@ export default function TrackingMap({
 }: TrackingMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [liveEvent, setLiveEvent] = useState<PointInput | null>(null);
   const lastFitRef = useRef<string | null>(null);
   const lastCenterRef = useRef<string | null>(null);
 
-  // ✅ Tile provider (production-safe) — set NEXT_PUBLIC_MAPTILER_KEY
-  const TILE_URL = `https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key=${process.env.NEXT_PUBLIC_MAPTILER_KEY || ""}`;
+  const TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
   const normalized = useMemo(() => {
     const oLat = asNumber(origin?.lat);
@@ -109,12 +110,21 @@ export default function TrackingMap({
       .filter((coord): coord is [number, number] => coord !== null);
   }, [events]);
 
-  const lastEventCoord = useMemo(() => {
+  const baseLastEventCoord = useMemo(() => {
     if (eventCoords.length > 0) return eventCoords[eventCoords.length - 1];
     return normalized.e
       ? ([normalized.e[0], normalized.e[1]] as [number, number])
       : null;
   }, [eventCoords, normalized.e]);
+
+  const liveCoord = useMemo(() => {
+    const lat = asNumber(liveEvent?.lat);
+    const lng = asNumber(liveEvent?.lng);
+    if (lat === null || lng === null) return null;
+    return [lat, lng] as [number, number];
+  }, [liveEvent?.lat, liveEvent?.lng]);
+
+  const lastEventCoord = liveCoord ?? baseLastEventCoord;
 
   const routeCoords = useMemo(() => {
     const coords: Array<[number, number]> = [];
@@ -128,11 +138,12 @@ export default function TrackingMap({
 
     pushCoord(normalized.o);
     eventCoords.forEach((coord) => pushCoord(coord));
-    pushCoord(lastEventCoord);
+    pushCoord(baseLastEventCoord);
+    pushCoord(liveCoord);
     pushCoord(normalized.d);
 
     return coords;
-  }, [normalized.o, normalized.d, eventCoords, lastEventCoord]);
+  }, [normalized.o, normalized.d, eventCoords, baseLastEventCoord, liveCoord]);
 
   const boundsKey = useMemo(() => {
     if (routeCoords.length === 0) return null;
@@ -151,7 +162,6 @@ export default function TrackingMap({
     () => createDotIcon("marker-destination"),
     [],
   );
-  const currentIcon = useMemo(() => createDotIcon("marker-current"), []);
 
   const originLabelIcon = useMemo(
     () => createLabelIcon(labelFor(origin?.label, "Origin"), "label-origin"),
@@ -165,11 +175,79 @@ export default function TrackingMap({
       ),
     [destination?.label],
   );
-  const currentLabelIcon = useMemo(
-    () =>
-      createLabelIcon(labelFor(lastEvent?.label, "Current"), "label-current"),
-    [lastEvent?.label],
-  );
+  const currentLabelIcon = useMemo(() => {
+    const label =
+      liveEvent?.label || lastEvent?.label || (lastEventCoord ? "Current" : "");
+    return createLabelIcon(labelFor(label, "Current"), "label-current");
+  }, [liveEvent?.label, lastEvent?.label, lastEventCoord]);
+
+  useEffect(() => {
+    const ref = (reference || "").trim();
+    if (!ref) {
+      setLiveEvent(null);
+      return;
+    }
+
+    let active = true;
+    let timer: ReturnType<typeof setInterval> | null = null;
+
+    const poll = async () => {
+      try {
+        const res = await fetch(
+          `/api/public/tracking/${encodeURIComponent(ref)}/live`,
+          { cache: "no-store" },
+        );
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          lat?: number;
+          lng?: number;
+          label?: string | null;
+          updated_at?: string | null;
+        };
+        if (!active) return;
+        if (data?.lat == null || data?.lng == null) return;
+        setLiveEvent({
+          lat: data.lat,
+          lng: data.lng,
+          label: data.label ?? undefined,
+        });
+      } catch {
+        // ignore
+      }
+    };
+
+    void poll();
+    timer = setInterval(poll, 20000);
+
+    return () => {
+      active = false;
+      if (timer) clearInterval(timer);
+    };
+  }, [reference]);
+
+  const smoothRoute = useMemo(() => {
+    if (routeCoords.length < 2) return routeCoords;
+
+    const interpolate = (a: [number, number], b: [number, number], steps = 8) => {
+      const points: [number, number][] = [];
+      for (let i = 1; i <= steps; i += 1) {
+        const t = i / steps;
+        points.push([
+          a[0] + (b[0] - a[0]) * t,
+          a[1] + (b[1] - a[1]) * t,
+        ]);
+      }
+      return points;
+    };
+
+    const smoothed: [number, number][] = [];
+    for (let i = 0; i < routeCoords.length - 1; i += 1) {
+      smoothed.push(routeCoords[i]);
+      smoothed.push(...interpolate(routeCoords[i], routeCoords[i + 1]));
+    }
+    smoothed.push(routeCoords[routeCoords.length - 1]);
+    return smoothed;
+  }, [routeCoords]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -190,25 +268,23 @@ export default function TrackingMap({
     }
   }, [mapReady, routeCoords, boundsKey, lastEventCoord, lastEventKey]);
 
-  const missingTileKey = TILE_URL.includes("key=") && TILE_URL.endsWith("key=");
 
   return (
     <div className="mt-6">
       <div className="text-slate-400 text-sm mb-2">Map</div>
 
-      <div className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
+      <div className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950" data-tracking-map="true">
         <div className="relative">
           <div className="w-full h-80">
             <MapContainer
               center={[0, 0]}
-              zoom={4}
+              zoom={3}
               scrollWheelZoom={false}
+              maxZoom={8}
+              minZoom={2}
               style={{ height: "100%", width: "100%" }}
-              // ✅ Reliable way to capture the map instance
-              whenCreated={(map) => {
-                mapRef.current = map;
-                setMapReady(true);
-              }}
+              whenReady={() => setMapReady(true)}
+              ref={mapRef}
             >
               <TileLayer
                 attribution="&copy; OpenStreetMap contributors"
@@ -217,25 +293,27 @@ export default function TrackingMap({
                 keepBuffer={2}
               />
 
-              {routeCoords.length >= 2 ? (
+              {smoothRoute.length >= 2 ? (
                 <>
                   <Polyline
-                    positions={routeCoords}
+                    positions={smoothRoute}
                     pathOptions={{
-                      className: "route-glow",
-                      color: "#60a5fa",
-                      weight: 10,
-                      opacity: 0.35,
+                      color: "rgba(0,0,0,0.18)",
+                      weight: 7,
+                      opacity: 0.6,
+                      lineCap: "round",
+                      lineJoin: "round",
                     }}
                   />
                   <Polyline
-                    positions={routeCoords}
+                    positions={smoothRoute}
                     pathOptions={{
-                      className: "route-line",
-                      color: "#0f172a",
-                      weight: 5,
-                      opacity: 0.95,
-                      dashArray: "8 8",
+                      color: "#3b82f6",
+                      weight: 3,
+                      opacity: 0.85,
+                      lineCap: "round",
+                      lineJoin: "round",
+                      dashArray: "6 10",
                     }}
                   />
                 </>
@@ -274,7 +352,7 @@ export default function TrackingMap({
                 <>
                   <CircleMarker
                     center={lastEventCoord}
-                    radius={12}
+                    radius={16}
                     pathOptions={{
                       color: "#f59e0b",
                       weight: 2,
@@ -282,10 +360,15 @@ export default function TrackingMap({
                     }}
                     className="current-ring"
                   />
-                  <Marker
-                    position={lastEventCoord}
-                    icon={currentIcon}
-                    zIndexOffset={1000}
+                  <CircleMarker
+                    center={lastEventCoord}
+                    radius={6}
+                    pathOptions={{
+                      color: "#ffffff",
+                      weight: 2,
+                      fillColor: "#f59e0b",
+                      fillOpacity: 1,
+                    }}
                   />
                   <Marker
                     position={lastEventCoord}
@@ -302,12 +385,6 @@ export default function TrackingMap({
               </div>
             ) : null}
 
-            {mapReady && missingTileKey ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-slate-950/70 text-slate-200 text-sm px-4 text-center">
-                Missing NEXT_PUBLIC_MAPTILER_KEY. Add it to .env.local and
-                restart the dev server.
-              </div>
-            ) : null}
           </div>
         </div>
       </div>
@@ -425,13 +502,6 @@ export default function TrackingMap({
             stroke-opacity: 0;
             transform: scale(1.45);
           }
-        }
-        .route-glow {
-          filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.6));
-        }
-        .route-line {
-          stroke-linecap: round;
-          stroke-linejoin: round;
         }
       `}</style>
     </div>

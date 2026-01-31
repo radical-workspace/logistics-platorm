@@ -7,6 +7,7 @@ export type PointInput = {
 };
 
 export type TrackingMapProps = {
+  reference?: string;
   origin?: PointInput;
   destination?: PointInput;
   lastEvent?: PointInput;

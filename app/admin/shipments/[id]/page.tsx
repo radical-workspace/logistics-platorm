@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { supabase } from '@/lib/client/supabaseclient';
 import { apiFetch } from '@/lib/client/api';
+import AdminLocationCorrectionMap from '@/app/components/AdminLocationCorrectionMap';
 import type { Shipment, ShipmentEvent } from '@/lib/shared/types';
 
 type ShipmentStatus = Shipment['status'];
@@ -57,11 +58,35 @@ export default function AdminShipmentDetailPage() {
   const [eventType, setEventType] = useState('milestone');
   const [eventNotes, setEventNotes] = useState('');
   const [eventSaving, setEventSaving] = useState(false);
+  const [draftLatLng, setDraftLatLng] = useState<[number, number] | null>(null);
+  const [correctionReason, setCorrectionReason] = useState('');
+  const [savingCorrection, setSavingCorrection] = useState(false);
 
   const title = useMemo(() => {
     if (!shipment) return 'Shipment';
     return shipment.reference_number;
   }, [shipment]);
+
+  const currentCoords = useMemo(() => {
+    const lat = shipment?.current_lat;
+    const lng = shipment?.current_lng;
+    if (lat == null || lng == null) return null;
+    const nLat = Number(lat);
+    const nLng = Number(lng);
+    if (!Number.isFinite(nLat) || !Number.isFinite(nLng)) return null;
+    return [nLat, nLng] as [number, number];
+  }, [shipment?.current_lat, shipment?.current_lng]);
+
+  const mapCenter = useMemo(() => {
+    if (currentCoords) return currentCoords;
+    const lat = shipment?.origin_lat;
+    const lng = shipment?.origin_lng;
+    if (lat == null || lng == null) return null;
+    const nLat = Number(lat);
+    const nLng = Number(lng);
+    if (!Number.isFinite(nLat) || !Number.isFinite(nLng)) return null;
+    return [nLat, nLng] as [number, number];
+  }, [currentCoords, shipment?.origin_lat, shipment?.origin_lng]);
 
   useEffect(() => {
     if (!shipmentId) return;
@@ -291,6 +316,57 @@ export default function AdminShipmentDetailPage() {
     }
   };
 
+  const saveCorrection = async () => {
+    if (!shipmentId) return;
+    if (!draftLatLng) {
+      toast.error('Select a point on the map first');
+      return;
+    }
+
+    setSavingCorrection(true);
+    try {
+      const res = await apiFetch(
+        `/api/admin/shipments/${encodeURIComponent(shipmentId)}/correct-location`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            lat: draftLatLng[0],
+            lng: draftLatLng[1],
+            reason: correctionReason.trim() || null,
+          }),
+        },
+      );
+
+      const json = (await res.json()) as { ok?: boolean; event?: ShipmentEvent; error?: string };
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error || 'Failed to save correction');
+      }
+
+      if (shipment) {
+        setShipment({
+          ...shipment,
+          current_lat: draftLatLng[0],
+          current_lng: draftLatLng[1],
+        });
+      }
+      if (json.event) {
+        setEvents((prev) => [json.event as ShipmentEvent, ...prev]);
+      } else {
+        await reloadEvents();
+      }
+
+      toast.success('Location corrected');
+      setDraftLatLng(null);
+      setCorrectionReason('');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to save correction';
+      toast.error(message);
+    } finally {
+      setSavingCorrection(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 p-8">
       <div className="max-w-7xl mx-auto">
@@ -479,6 +555,55 @@ export default function AdminShipmentDetailPage() {
                     </button>
                   </div>
                 </form>
+              </div>
+
+              <div id="location-correction" className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                <h2 className="text-xl font-bold">Drop-pin correction</h2>
+                <p className="mt-2 text-sm text-slate-400">
+                  Click on the map to correct the live location without editing history.
+                </p>
+
+                <div className="mt-4">
+                  <AdminLocationCorrectionMap
+                    center={mapCenter}
+                    current={currentCoords}
+                    draft={draftLatLng}
+                    onSelect={(coords) => setDraftLatLng(coords)}
+                  />
+                  <div className="mt-3 grid gap-3">
+                    <input
+                      value={correctionReason}
+                      onChange={(e) => setCorrectionReason(e.target.value)}
+                      className="w-full px-4 py-2 rounded bg-slate-950 border border-slate-800 text-slate-100"
+                      placeholder="Reason (optional)"
+                    />
+                    {draftLatLng ? (
+                      <div className="text-xs text-slate-500">
+                        Selected: {draftLatLng[0].toFixed(5)}, {draftLatLng[1].toFixed(5)}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-slate-500">Select a point to enable save.</div>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={savingCorrection || !draftLatLng}
+                        className="bg-amber-500 hover:bg-amber-600 disabled:bg-slate-700 transition px-4 py-2 rounded font-semibold text-slate-900"
+                        onClick={() => void saveCorrection()}
+                      >
+                        {savingCorrection ? 'Saving…' : 'Save location'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!draftLatLng}
+                        className="bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800/40 transition px-4 py-2 rounded font-semibold"
+                        onClick={() => setDraftLatLng(null)}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div id="dispatcher" className="bg-slate-900 border border-slate-800 rounded-xl p-6">
