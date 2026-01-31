@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const { spawn } = require('child_process');
+import fs from "node:fs";
+import path from "node:path";
+import { spawn } from "node:child_process";
 
 const cwd = 'e:/logistics/logistics-platorm';
 const envPath = path.join(cwd, '.env.local');

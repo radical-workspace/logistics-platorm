@@ -1,0 +1,131 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: Dashboard
+          - generic [ref=e8]:
+            - text: e2e-customer@afghco.test
+            - generic [ref=e9]: · customer
+        - generic [ref=e10]:
+          - navigation [ref=e11]:
+            - link "Home" [ref=e12] [cursor=pointer]:
+              - /url: /dashboard
+            - link "Shipments" [ref=e13] [cursor=pointer]:
+              - /url: /dashboard/shipments
+            - link "Vehicles" [ref=e14] [cursor=pointer]:
+              - /url: /dashboard/vehicles
+            - link "Tracking" [ref=e15] [cursor=pointer]:
+              - /url: /dashboard/tracking
+          - button "Sign out" [ref=e16]
+    - main [ref=e17]:
+      - main [ref=e18]:
+        - generic [ref=e19]:
+          - generic [ref=e20]:
+            - generic [ref=e21]:
+              - paragraph [ref=e22]: Operations Command Centre
+              - heading "Welcome back to the control tower" [level=1] [ref=e23]
+              - paragraph [ref=e24]: Monitor network performance, track live consignments, and coordinate multimodal moves directly from your AFGHCO mission console.
+            - generic [ref=e25]:
+              - generic [ref=e26]:
+                - paragraph [ref=e27]: Active consignments
+                - paragraph [ref=e28]: "0"
+                - paragraph [ref=e29]: Currently airborne / en route
+              - generic [ref=e30]:
+                - paragraph [ref=e31]: Deliveries cleared
+                - paragraph [ref=e32]: "0"
+                - paragraph [ref=e33]: Completed in the past cycle
+              - generic [ref=e34]:
+                - paragraph [ref=e35]: Pending release
+                - paragraph [ref=e36]: "0"
+                - paragraph [ref=e37]: Awaiting customs or dispatch
+              - generic [ref=e38]:
+                - paragraph [ref=e39]: Fleet ready
+                - paragraph [ref=e40]: "0"
+                - paragraph [ref=e41]: Vehicles available within SLA
+          - generic [ref=e42]:
+            - generic [ref=e43]:
+              - generic [ref=e44]:
+                - generic [ref=e46]:
+                  - heading "Network status" [level=2] [ref=e47]
+                  - paragraph [ref=e48]: Synchronising latest telemetry…
+                - generic [ref=e49]:
+                  - generic [ref=e50]:
+                    - heading "Live consignments" [level=3] [ref=e51]
+                    - paragraph [ref=e52]: Flights and convoys tracked with live telemetry and alerts for customs, weather, and risk advisories.
+                    - list [ref=e53]:
+                      - listitem [ref=e54]: • Satellite-backed visibility across Afghan air corridors
+                      - listitem [ref=e55]: • Escalation protocols for SLA deviation and route variance
+                      - listitem [ref=e56]: • Automated status messaging to government and NGO stakeholders
+                  - generic [ref=e57]:
+                    - heading "Readiness posture" [level=3] [ref=e58]
+                    - paragraph [ref=e59]: Fleet, crews, and bonded storage aligned with today’s uplift plan and humanitarian air bridge commitments.
+                    - list [ref=e60]:
+                      - listitem [ref=e61]: • Kabul, Kandahar, and Mazar distribution hubs fully staffed
+                      - listitem [ref=e62]: • Medical supply lane secured with cold-chain validation
+                      - listitem [ref=e63]: • Border documentation packages pre-cleared and archived
+              - generic [ref=e64]:
+                - generic [ref=e65]:
+                  - heading "Recent consignments" [level=2] [ref=e66]
+                  - generic [ref=e67]: Live feed
+                - list [ref=e68]:
+                  - listitem [ref=e69]: No consignments yet — once bookings are raised they will appear here automatically.
+            - generic [ref=e70]:
+              - generic [ref=e71]:
+                - heading "Mission alerts" [level=2] [ref=e72]
+                - list [ref=e73]:
+                  - listitem [ref=e74]: No event alerts just yet. Realtime milestones will stream here as consignments update.
+              - generic [ref=e75]:
+                - generic [ref=e76]:
+                  - heading "Notifications" [level=2] [ref=e77]
+                  - generic [ref=e78]: Realtime
+                - list
+              - generic [ref=e79]:
+                - heading "Control checklist" [level=2] [ref=e80]
+                - list [ref=e81]:
+                  - listitem [ref=e82]: • Verify customs dossiers issued for outbound flights
+                  - listitem [ref=e83]: • Confirm humanitarian cargo separation protocols
+                  - listitem [ref=e84]: • Sync convoy manifests with provincial security partners
+                  - listitem [ref=e85]: • Validate telematics uptime across cold-chain fleet
+              - generic [ref=e86]:
+                - generic [ref=e87]:
+                  - generic [ref=e88]:
+                    - heading "Support" [level=2] [ref=e89]
+                    - paragraph [ref=e90]: Need ops support or escalation? Raise a ticket with mission control.
+                  - generic [ref=e91]: 24/7
+                - generic [ref=e92]:
+                  - generic [ref=e93]:
+                    - text: Subject
+                    - textbox "Subject" [ref=e94]:
+                      - /placeholder: e.g., Cold chain sensor alert
+                  - generic [ref=e96]:
+                    - text: Priority
+                    - combobox "Priority" [ref=e97]:
+                      - option "Low"
+                      - option "Normal" [selected]
+                      - option "High"
+                  - generic [ref=e98]:
+                    - text: Message
+                    - textbox "Message" [ref=e99]:
+                      - /placeholder: Describe the issue, route, and consignments impacted
+                  - button "Submit support ticket" [ref=e100]
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - generic [ref=e104]:
+                - generic [ref=e105]: Tracking preview
+                - paragraph [ref=e106]: Enter a reference number to preview tracking.
+              - generic [ref=e107]:
+                - 'textbox "Reference #" [ref=e108]'
+                - button "Track" [disabled] [ref=e109]
+            - generic [ref=e110]:
+              - generic [ref=e111]:
+                - generic [ref=e112]: Map preview
+                - generic [ref=e113]: Simulated map view (mobile-first)
+              - generic [ref=e127]: This placeholder is shown when live map data isn’t available yet.
+  - button "Open Next.js Dev Tools" [ref=e133] [cursor=pointer]:
+    - img [ref=e134]
+  - alert [ref=e137]
+```

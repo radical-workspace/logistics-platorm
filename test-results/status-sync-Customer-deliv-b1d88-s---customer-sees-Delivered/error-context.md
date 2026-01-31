@@ -1,0 +1,153 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - img "AFGHCO Shipping & Logistics" [ref=e5]
+        - generic [ref=e6]:
+          - generic [ref=e7]: AFGHCO
+          - generic [ref=e8]: Shipping & Logistics
+      - navigation [ref=e9]:
+        - link "Home" [ref=e10] [cursor=pointer]:
+          - /url: /
+        - link "Solutions" [ref=e11] [cursor=pointer]:
+          - /url: /solutions
+        - link "Platform" [ref=e12] [cursor=pointer]:
+          - /url: /platform
+        - link "Company" [ref=e13] [cursor=pointer]:
+          - /url: /company
+        - link "Contact" [ref=e14] [cursor=pointer]:
+          - /url: /contact
+        - link "Tracking" [ref=e15] [cursor=pointer]:
+          - /url: /tracking
+      - generic [ref=e16]:
+        - link "Book a call" [ref=e17] [cursor=pointer]:
+          - /url: /contact
+        - link "Client login" [ref=e18] [cursor=pointer]:
+          - /url: /dashboard/auth/login
+  - main [ref=e19]:
+    - generic [ref=e20]:
+      - heading "Shipment Tracking" [level=1] [ref=e21]
+      - paragraph [ref=e22]: Enter a shipment reference from the home page to view status.
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e26]: Reference
+            - generic [ref=e27]: E2E-20260127-35045
+          - generic [ref=e28]:
+            - generic [ref=e29]: Status
+            - generic [ref=e30]: delivered
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: Origin
+            - generic [ref=e34]: Kabul
+          - generic [ref=e35]:
+            - generic [ref=e36]: Destination
+            - generic [ref=e37]: Lagos
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - generic [ref=e40]: Estimated delivery
+              - generic [ref=e41]: —
+            - generic [ref=e42]:
+              - generic [ref=e43]: Actual delivery
+              - generic [ref=e44]: —
+          - generic [ref=e45]:
+            - generic [ref=e46]: Last update
+            - generic [ref=e47]:
+              - text: status_update
+              - generic [ref=e48]: (2026-01-31T00:46:19.649485+00:00)
+            - generic [ref=e49]: Delivered (approved by admin after customer confirmation)
+          - generic [ref=e50]:
+            - generic [ref=e51]: Map
+            - generic [ref=e54]:
+              - generic [ref=e55]:
+                - generic:
+                  - generic:
+                    - img
+                  - generic:
+                    - button [ref=e56] [cursor=pointer]
+                    - 'button "Current: status_update"':
+                      - generic [ref=e58] [cursor=pointer]: "Current: status_update"
+                - generic:
+                  - generic [ref=e59]:
+                    - button "Zoom in" [ref=e60] [cursor=pointer]: +
+                    - button "Zoom out" [ref=e61] [cursor=pointer]: −
+                  - generic [ref=e62]:
+                    - link "Leaflet" [ref=e63] [cursor=pointer]:
+                      - /url: https://leafletjs.com
+                      - img [ref=e64]
+                      - text: Leaflet
+                    - text: "| © OpenStreetMap contributors"
+              - generic [ref=e68]: Loading map...
+            - generic [ref=e69]: Green = Origin • Amber = Current location • Blue = Destination
+          - generic [ref=e70]:
+            - generic [ref=e71]:
+              - generic [ref=e72]:
+                - heading "Shipment progress" [level=3] [ref=e73]
+                - paragraph [ref=e74]: Visual confirmation of movement for this tracking ID.
+              - generic [ref=e75]: Delivered
+            - generic [ref=e76]:
+              - generic [ref=e77]:
+                - generic [ref=e78]: Current location
+                - generic [ref=e79]: Delivered (approved by admin after customer confirmation)
+              - generic [ref=e80]:
+                - generic [ref=e81]: Route
+                - generic [ref=e82]: Kabul → Delivered (approved by admin after customer confirmation) → Lagos
+              - generic [ref=e83]:
+                - generic [ref=e84]: Last update
+                - generic [ref=e85]: 1/31/2026, 1:46:19 AM
+            - generic [ref=e86]:
+              - progressbar "Shipment progress" [ref=e88]
+              - generic [ref=e89]: Delivered
+  - contentinfo [ref=e90]:
+    - generic [ref=e91]:
+      - generic [ref=e92]:
+        - generic [ref=e93]:
+          - generic [ref=e94]: AFGHCO
+          - generic [ref=e95]: LOGISTICS
+          - paragraph [ref=e96]: Afghanistan’s sovereign logistics partner delivering global freight orchestration, bonded warehousing, and real-time situational awareness for government, NGO, and commercial programmes.
+          - paragraph [ref=e97]: Network Operations Centre
+          - paragraph [ref=e98]: Kabul International Airport, Air Cargo Village
+          - paragraph [ref=e99]: ops@afghco.com · +93 (0)20 210 1111
+        - generic [ref=e100]:
+          - generic [ref=e101]:
+            - paragraph [ref=e102]: Company
+            - link "Home" [ref=e103] [cursor=pointer]:
+              - /url: /
+            - link "About" [ref=e104] [cursor=pointer]:
+              - /url: /company
+            - link "Contact" [ref=e105] [cursor=pointer]:
+              - /url: /contact
+            - link "Platform" [ref=e106] [cursor=pointer]:
+              - /url: /platform
+            - link "Client login" [ref=e107] [cursor=pointer]:
+              - /url: /dashboard/auth/login
+          - generic [ref=e108]:
+            - paragraph [ref=e109]: Solutions
+            - link "Supply chain control" [ref=e110] [cursor=pointer]:
+              - /url: /solutions#supply-chain
+            - link "Air, sea, land freight" [ref=e111] [cursor=pointer]:
+              - /url: /solutions#freight
+            - link "Secure warehousing" [ref=e112] [cursor=pointer]:
+              - /url: /solutions#warehousing
+            - link "Track a shipment" [ref=e113] [cursor=pointer]:
+              - /url: /tracking
+          - generic [ref=e114]:
+            - paragraph [ref=e115]: Compliance
+            - paragraph [ref=e116]: ISO 9001
+            - paragraph [ref=e117]: ICAO Annex 17
+            - paragraph [ref=e118]: "UNGM vendor #457890"
+          - generic [ref=e119]:
+            - paragraph [ref=e120]: Rapid response
+            - paragraph [ref=e121]: Emergency desk
+            - paragraph [ref=e122]: crisis@afghco.com
+            - paragraph [ref=e123]: +93 (0)20 210 1199
+      - generic [ref=e124]:
+        - generic [ref=e125]: © 2026 AFGHCO. All rights reserved.
+        - generic [ref=e126]: Built with Next.js + Supabase
+  - button "Open Next.js Dev Tools" [ref=e132] [cursor=pointer]:
+    - img [ref=e133]
+  - alert [ref=e136]
+```
